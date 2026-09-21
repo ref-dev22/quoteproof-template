@@ -6,7 +6,7 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Repository: `https://github.com/ref-dev22/quoteproof-template`
 - Default branch: `main`
-- Candidate revision: `15d6915`
+- Candidate revision: `5ee3a5f`
 - External scaffold command after publication:
 
   ```bash
@@ -32,11 +32,12 @@ This is a preparation artifact only. It does not publish the repository or submi
 - The direct `verify:quote --compare-stored` path performs the same registry/oracle reads without the Next.js server. The independent expected-quote check requires separately supplied commitment/issuer/nonce and reports `not_supplied`, `not_checked`, `match`, or `mismatch`; two genuine fixtures are independently authentic but a different quote is rejected for the expected quote.
 - Public local clean-room install/build/boot passes at `0dbe33a`; the current working candidate additionally passes 37 Hardhat tests, zero-warning Hardhat/frontend lint, type-check, production build, route-guard regressions, true 375/320px mobile DOM checks, the narrow-layout fix, direct CLI read-only verification, and the local endpoint adversarial checks in this checkout.
 - The public CI workflow is deterministic (`npm ci`, compile, tests, types, lint, build) and does not deploy contracts or require wallet/private secrets. `AGENTS.md` and `DEMO-SCRIPT.md` describe the actual QuoteProof paths and the API-only forged-copy demonstration.
+- A bounded independent README walkthrough used an exact local-source export of `5ee3a5f` as an explicitly documented pre-publication substitution for the unavailable remote repository. It confirmed the Node/npm prerequisite, no-secret boundary, and corrected the preview-port, PowerShell-command, and Hardhat-checklist defects; the clean-copy `npm ci` then produced no exit or elapsed-time result during the bounded wait, so downstream D6 runtime gates remain unclaimed.
 - The manifest is local and validated against the current official CLI schema; the remote command remains unrun because the repository is not published.
 
 ## Honest remaining gates
 
 - Remote repository publication and external CLI scaffold run.
-- Full independent README run (the newcomer review was read-only and did not satisfy D6).
+- Complete the independent README run after the clean-copy `npm ci` can finish; the remote scaffold test remains a separate mandatory gate.
 - The mocked wallet guard matrix is complete; real wallet rejection, wrong-network, pending, and duplicate-click interaction remains intentionally unclaimed because no live signing or additional wallet harness was authorized.
 - Official organizer terms and final submission authorization.
