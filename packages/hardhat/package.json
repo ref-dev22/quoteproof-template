@@ -19,6 +19,7 @@
     "lint-staged": "eslint",
     "test": "HEDERA_FORKING=true REPORT_GAS=true hardhat test",
     "quote:create": "ts-node scripts/runHardhatQuoteCreateWithPK.ts",
+    "quote:e2e": "ts-node scripts/runHardhatQuoteE2EWithPK.ts",
     "verify:quote": "ts-node scripts/verifyQuote.ts",
     "verify": "hardhat verify",
     "verify:testnet": "hardhat verify --network hederaTestnet",
