@@ -26,6 +26,18 @@ const hederaRpcUrl = process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/ap
 const deployerPrivateKey =
   process.env.__RUNTIME_DEPLOYER_PRIVATE_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
+const hardhatNetwork =
+  process.env.HEDERA_FORKING === "true"
+    ? {
+        forking: {
+          url: hederaRpcUrl,
+          chainId: 296,
+          workerPort: 10001,
+        },
+        chainId: 296,
+      }
+    : { chainId: 31337 };
+
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
@@ -47,14 +59,7 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    hardhat: {
-      forking: {
-        url: hederaRpcUrl,
-        // @ts-expect-error - custom property for hedera-forking plugin
-        chainId: 296,
-        workerPort: 10001,
-      },
-    },
+    hardhat: hardhatNetwork,
     hederaTestnet: {
       url: "https://testnet.hashio.io/api",
       accounts: [deployerPrivateKey],
