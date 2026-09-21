@@ -1,0 +1,54 @@
+{
+  "name": "QuoteProof Scaffold-HBAR Template",
+  "description": "Chainlink-backed reference-quote receipts on Hedera testnet with adversarial verification tests.",
+  "version": "1.0.0",
+  "create-scaffold-hbar": {
+    "capabilities": {
+      "frontend": ["nextjs-app"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["npm"]
+    },
+    "defaults": {
+      "frontend": "nextjs-app",
+      "solidityFramework": "hardhat",
+      "packageManager": "npm"
+    },
+    "outro": {
+      "sections": [
+        {
+          "title": "QuoteProof first run",
+          "steps": [
+            {
+              "label": "Start the wallet-free preview",
+              "command": "{run:next:dev}"
+            },
+            {
+              "label": "Run the deterministic contract tests",
+              "command": "{run:framework:test}"
+            },
+            {
+              "text": "Open the preview before connecting a wallet. A testnet write is a separate, optional action documented in README.md."
+            }
+          ]
+        },
+        {
+          "title": "Optional Hedera testnet deployment",
+          "steps": [
+            {
+              "label": "Create a local encrypted deployer",
+              "command": "{run:framework:account:generate}"
+            },
+            {
+              "label": "Fund the account",
+              "url": "https://portal.hedera.com/faucet"
+            },
+            {
+              "label": "Deploy after reviewing the README",
+              "command": "{run:framework:deploy} --network hederaTestnet --tags QuoteProof"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
