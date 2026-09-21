@@ -19,11 +19,11 @@ import {
 const HEDERA_TESTNET_CHAIN_ID = 296n;
 const HEDERA_TESTNET_RPC_URL = "https://testnet.hashio.io/api";
 
-type DirectStoredComparison =
+export type DirectStoredComparison =
   | { status: "match" | "mismatch" | "not_found"; storedCommitment: string }
   | { status: "wrong_network" | "provider_error" | "not_run"; error?: string; providerChainId?: string };
 
-type DirectHistoricalOracle =
+export type DirectHistoricalOracle =
   HistoricalOracleComparison | { status: "unavailable" | "not_checked"; requestedRoundId: string; error?: string };
 
 type ReadOnlyVerificationOutput = VerificationResult & {
@@ -125,6 +125,16 @@ function invalidResult(error: unknown): VerificationResult {
 
 function directNotChecked(roundId: string): DirectHistoricalOracle {
   return { status: "not_checked", requestedRoundId: roundId };
+}
+
+/** A requested read-only comparison is successful only when both on-chain checks match. */
+export function readOnlyComparisonFailed(
+  comparisonRequested: boolean,
+  recordedComparison: DirectStoredComparison,
+  historicalOracle: DirectHistoricalOracle,
+): boolean {
+  if (!comparisonRequested) return false;
+  return recordedComparison.status !== "match" || historicalOracle.status !== "match";
 }
 
 async function runReadOnlyComparison(
@@ -269,8 +279,7 @@ export function main(args: readonly string[] = process.argv.slice(2)): void {
       !result.valid ||
       expectedQuote.status === "mismatch" ||
       expectedQuote.status === "not_checked" ||
-      recordedComparison.status === "wrong_network" ||
-      recordedComparison.status === "provider_error"
+      readOnlyComparisonFailed(hasFlag(args, "--compare-stored"), recordedComparison, historicalOracle)
     ) {
       process.exitCode = 2;
     }

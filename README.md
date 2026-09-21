@@ -97,7 +97,7 @@ Testnet deployment and receipt creation require a Hedera-created ECDSA account a
 # requires the local encrypted deployer setup
 npm run hardhat:deploy -- --network hederaTestnet --tags QuoteProof
 npm run quote:e2e -w @sh/hardhat -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a
 ```
 
 Never put a private key, encrypted keystore, or funded-account material in the repository or browser environment. Testnet credentials stay local and ignored.
@@ -141,19 +141,19 @@ Hedera's [EVM/Hardhat documentation](https://docs.hedera.com/hedera/tutorials/sm
 
 ### Local read-only verification without the web app
 
-The direct Hardhat verifier can perform the same wallet-free checks without a hosted API or Next.js server. It uses the configured deployment context and a read-only JSON-RPC provider:
+The direct Hardhat verifier can perform the same wallet-free checks without a hosted API or Next.js server. The read-only example supplies the chain, registry, and oracle explicitly so it also works from a fresh source export, where ignored deployment artifacts are absent:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --compare-stored --rpc-url https://testnet.hashio.io/api
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
 ```
 
 The output keeps `localConsistency` calculation/commitment verification, `historicalOracle` exact-round verification, and `recordedComparison` stored state separate. To check evidence for a quote selected outside the receipt, supply all three expected fields independently:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-commitment 0x<independent-commitment> --expected-issuer 0x<expected-issuer> --expected-nonce 0
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --allow-foreign-context --expected-commitment 0x<independent-commitment> --expected-issuer 0x<expected-issuer> --expected-nonce 0
 ```
 
-Without those independent fields, `expectedQuote.status` is `not_supplied`; malformed or incomplete fields are `not_checked`. A genuine different quote can pass its own local and stored checks but fail `expectedQuote`, which is the intended distinction between quote authenticity and evidence for a particular expected quote.
+Without those independent fields, `expectedQuote.status` is `not_supplied`; malformed or incomplete fields are `not_checked`. `--allow-foreign-context` makes this second command intentionally offline; it does not prove recorded state. A genuine different quote can pass its own local and stored checks but fail `expectedQuote`, which is the intended distinction between quote authenticity and evidence for a particular expected quote.
 
 ## Recovery and failure exercises
 

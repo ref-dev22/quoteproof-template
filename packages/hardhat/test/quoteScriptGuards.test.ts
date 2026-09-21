@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { resolveVerificationOptions } from "../scripts/verifyQuote";
+import { readOnlyComparisonFailed, resolveVerificationOptions } from "../scripts/verifyQuote";
 import { validateQuoteCreateNetwork } from "../scripts/runHardhatQuoteCreateWithPK";
 
 describe("QuoteProof script guards", function () {
@@ -30,5 +30,62 @@ describe("QuoteProof script guards", function () {
       expectedOracle: undefined,
       expectedIssuer: undefined,
     });
+  });
+
+  it("rejects every requested stored or historical non-success status while leaving optional checks non-fatal", function () {
+    const storedMatch = { status: "match" as const, storedCommitment: `0x${"1".repeat(64)}` };
+    const historicalMatch = {
+      status: "match" as const,
+      requestedRoundId: "7",
+      returnedRoundId: "7",
+      returnedPrice: "1",
+      returnedObservedAt: "2",
+      currentDecimals: "8",
+    };
+
+    expect(
+      readOnlyComparisonFailed(
+        false,
+        { status: "not_found", storedCommitment: `0x${"0".repeat(64)}` },
+        {
+          status: "not_checked",
+          requestedRoundId: "7",
+        },
+      ),
+    ).to.equal(false);
+    expect(
+      readOnlyComparisonFailed(
+        true,
+        { status: "mismatch", storedCommitment: storedMatch.storedCommitment },
+        historicalMatch,
+      ),
+    ).to.equal(true);
+    expect(
+      readOnlyComparisonFailed(true, { status: "not_found", storedCommitment: `0x${"0".repeat(64)}` }, historicalMatch),
+    ).to.equal(true);
+    expect(readOnlyComparisonFailed(true, { status: "not_run", error: "context missing" }, historicalMatch)).to.equal(
+      true,
+    );
+    expect(
+      readOnlyComparisonFailed(true, storedMatch, {
+        status: "mismatch",
+        requestedRoundId: "7",
+        returnedRoundId: "8",
+        returnedPrice: "1",
+        returnedObservedAt: "2",
+        currentDecimals: "8",
+      }),
+    ).to.equal(true);
+    expect(
+      readOnlyComparisonFailed(true, storedMatch, {
+        status: "unavailable",
+        requestedRoundId: "7",
+        error: "RPC failed",
+      }),
+    ).to.equal(true);
+    expect(readOnlyComparisonFailed(true, storedMatch, { status: "not_checked", requestedRoundId: "7" })).to.equal(
+      true,
+    );
+    expect(readOnlyComparisonFailed(true, storedMatch, historicalMatch)).to.equal(false);
   });
 });
