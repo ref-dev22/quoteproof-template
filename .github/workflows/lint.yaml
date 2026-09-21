@@ -10,12 +10,7 @@ on:
 
 jobs:
   ci:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        node: [lts/*]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -24,25 +19,31 @@ jobs:
           submodules: recursive
 
       - name: Setup node env
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 20.18.3
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Run Hardhat node and deploy contracts
-        run: |
-          npm run hardhat:chain &
-          timeout 60s bash -c 'until curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"web3_clientVersion\",\"params\":[],\"id\":1}" >/dev/null; do sleep 2; done'
-          npm run hardhat:deploy --network localhost
+      - name: Compile contracts
+        run: npm run hardhat:compile
+
+      - name: Check Hardhat typings
+        run: npm run hardhat:check-types
+
+      - name: Run Hardhat tests
+        run: npm run hardhat:test
 
       - name: Run nextjs lint
-        run: npm run next:lint --max-warnings=0
+        run: npm run next:lint -- --max-warnings=0
 
       - name: Check typings on nextjs
         run: npm run next:check-types
 
       - name: Run hardhat lint
-        run: npm run hardhat:lint --max-warnings=0
+        run: npm run hardhat:lint -- --max-warnings=0
+
+      - name: Build nextjs app
+        run: npm run next:build

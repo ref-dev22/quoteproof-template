@@ -18,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
+import { canWriteQuote, friendlyWriteError } from "~~/utils/quoteWrite";
 import { getBlockExplorerTxLink } from "~~/utils/scaffold-hbar";
 
 const TESTNET_CHAIN_ID = hederaTestnet.id;
@@ -89,9 +90,10 @@ type StoredComparisonResponse = {
     errors: string[];
   };
   recordedComparison: {
-    status: "match" | "mismatch" | "not_found" | "wrong_context" | "provider_error" | "not_run";
+    status: "match" | "mismatch" | "not_found" | "wrong_context" | "wrong_network" | "provider_error" | "not_run";
     storedCommitment?: string;
     error?: string;
+    providerChainId?: string;
   };
 };
 
@@ -136,26 +138,10 @@ function comparisonStatusLabel(status: StoredComparisonResponse["recordedCompari
     mismatch: "Stored commitment differs",
     not_found: "No stored commitment",
     wrong_context: "Trusted context rejected",
+    wrong_network: "Provider network rejected",
     provider_error: "Provider unavailable",
     not_run: "Not run",
   }[status];
-}
-
-function friendlyWriteError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/user rejected|rejected the request|denied|user denied/i.test(message)) {
-    return "Signature rejected. Nothing was recorded; review the quote and try again when you are ready.";
-  }
-  if (/PreviewRoundChanged|PreviewNonceChanged/i.test(message)) {
-    return "The reference changed before recording. Refresh the preview and submit once; no automatic second write was attempted.";
-  }
-  if (/StaleObservation|InvalidAnswer|OracleReadFailed|FutureObservation|InvalidObservationTime/i.test(message)) {
-    return "The reference feed is unavailable or outside its freshness policy. Refresh the preview and wait for a valid observation.";
-  }
-  if (/wrong network|chain/i.test(message)) {
-    return "Your wallet is on the wrong network. Switch to Hedera Testnet before recording.";
-  }
-  return "The write did not complete. Check the wallet and testnet connection, then retry only after reviewing the preview.";
 }
 
 function serializeReceipt(proof: ReceiptProof): Record<string, string> {
@@ -549,15 +535,15 @@ const QuoteProofExperience = () => {
   const observedAge = preview ? BigInt(nowSeconds) - preview[4] : undefined;
   const isFresh = observedAge !== undefined && observedAge >= 0n && (!maxAge || observedAge <= maxAge);
   const wrongNetwork = isConnected && chainId !== TESTNET_CHAIN_ID;
-  const canWrite = Boolean(
-    preview &&
-    cents !== undefined &&
-    isConnected &&
-    typeof nonceData === "bigint" &&
-    !wrongNetwork &&
-    !isMining &&
-    !txHash,
-  );
+  const canWrite = canWriteQuote({
+    hasPreview: Boolean(preview),
+    hasCents: cents !== undefined,
+    isConnected,
+    hasNonce: typeof nonceData === "bigint",
+    wrongNetwork,
+    isMining,
+    hasTxHash: Boolean(txHash),
+  });
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 1000);
@@ -576,7 +562,21 @@ const QuoteProofExperience = () => {
   };
 
   const recordQuote = async () => {
-    if (!preview || cents === undefined || !isConnected || wrongNetwork || isMining || txHash) return;
+    if (
+      !canWriteQuote({
+        hasPreview: Boolean(preview),
+        hasCents: cents !== undefined,
+        isConnected,
+        hasNonce: typeof nonceData === "bigint",
+        wrongNetwork,
+        isMining,
+        hasTxHash: Boolean(txHash),
+      }) ||
+      !preview ||
+      cents === undefined
+    ) {
+      return;
+    }
     setWriteMessage(undefined);
     setWriteError(false);
     try {

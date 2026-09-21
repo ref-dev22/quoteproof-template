@@ -24,7 +24,7 @@ The deployed testnet context used by this release candidate is:
 - Chainlink oracle: `0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`
 - Feed label: `HBAR / USD`; feed identifier is the contract's `FEED_ID`
 
-Historical confirmed testnet proof (read-only): [QuoteProof transaction on HashScan](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) · [Mirror Node result](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0x076690438e81f96fc77f3f6467157d2f53c05703ef9) (`SUCCESS`). This is historical evidence; do not repeat it.
+Historical confirmed testnet proof (read-only): [QuoteProof transaction on HashScan](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) · [Mirror Node result](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) (`SUCCESS`). This is historical evidence; do not repeat it.
 
 ## Create a project from the CLI
 
@@ -132,7 +132,7 @@ Expected result: HTTP `200` and JSON with decimal-string fields `nonce`, `roundI
 
 To inspect the historical confirmed receipt in a fresh browser session, open the [share route](http://localhost:3000/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). Confirm the `Confirmed on Hedera testnet` badge, event-bound receipt fields, transaction link, and Mirror Node link. Use `Export receipt JSON` to compare the downloaded commitment and quote fields with the displayed event; `Copy share link` must reproduce the same `?tx=` route. To exercise tamper handling, change only the exported commitment in a temporary copy and run the standalone verifier; it must return exit code `2` and `valid: false`. This is read-only and does not send another transaction.
 
-When an event-bound receipt is visible, `Compare stored commitment` exercises the second, independent check. The API accepts `{ "receipt": <receipt-json> }` at `POST /api/quote/compare`; it first runs the offline verifier, then reads `getCommitment` and `isStoredCommitment` from the configured registry. A genuine receipt should produce `valid` / `match`; a simple tamper should produce `invalid` / `not_run`; a recomputed forged copy should produce `valid` / `mismatch`; and an unknown issuer/nonce should produce `valid` / `not_found`. A failed RPC is surfaced as `provider_error` without turning a local result into on-chain proof.
+When an event-bound receipt is visible, `Compare stored commitment` exercises the second, independent check. The API accepts `{ "receipt": <receipt-json> }` at `POST /api/quote/compare`; it first runs the offline verifier, then checks the provider chain ID and reads `getCommitment` and `isStoredCommitment` from the configured registry. A genuine receipt should produce `valid` / `match`; a simple tamper should produce `invalid` / `not_run`; a recomputed forged copy should produce `valid` / `mismatch`; an unknown issuer/nonce should produce `valid` / `not_found`; and a wrong RPC chain is reported as `wrong_network` before registry getters run. A failed RPC is surfaced as `provider_error` without turning a local result into on-chain proof. Requests are bounded before JSON parsing.
 
 ## Environment variables
 
@@ -164,6 +164,7 @@ All are optional for the wallet-free preview unless noted.
 - `packages/nextjs/app/api/quote/preview/route.ts` — wallet-free live preview read
 - `packages/nextjs/app/api/quote/compare/route.ts` — read-only local-versus-stored receipt comparison
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored commitment status helper
+- `DEMO-SCRIPT.md` — reproducible 90-second read-only demo, including the API-only forged-copy case
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
 - `SUBMISSION-DRAFT.md` — proposed repository, exact external scaffold command, and owner-gated release checklist

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- this launcher is intentionally CommonJS
 const { spawnSync } = require("node:child_process");
 
 const mode = process.argv[2];
