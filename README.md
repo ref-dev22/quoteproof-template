@@ -105,7 +105,7 @@ Never put a private key, encrypted keystore, or funded-account material in the r
 2. A server-side read route calls the configured testnet RPC for `previewQuote`; no wallet-originating `from` address is needed for preview.
 3. The registry reads the fixed oracle, validates positive answer/freshness/decimals, and calculates tinybars with ceiling division. The current demo policy allows observations up to `93,600` seconds old.
 4. A wallet write calls `createQuote(cents, expectedRound, expectedNonce)`. The contract rechecks the round and nonce before emitting `QuoteRecorded`.
-5. The receipt card decodes the actual event from the transaction receipt. A share URL can be opened without the original wallet. The standalone verifier checks the receipt schema, supplied chain/registry/oracle/issuer bindings, arithmetic, and commitment offline; a separate RPC/Mirror/on-chain state check proves that the commitment is stored.
+5. The receipt card decodes the actual event from the transaction receipt. A share URL can be opened without the original wallet. The standalone verifier checks the receipt schema, supplied chain/registry/oracle/issuer bindings, arithmetic, and commitment offline; the read-only `POST /api/quote/compare` route then compares that commitment with the stored issuer/nonce record in the trusted testnet registry. It reports local consistency separately from recorded state (`match`, `mismatch`, `not_found`, or `provider_error`) and never signs or submits a transaction.
 
 This is a reference quote, not a payment, balance guarantee, or real-time market feed. The oracle replacement boundary is the registry constructor/provider interface; changing the provider requires a new deployment and fresh provenance checks.
 
@@ -116,7 +116,7 @@ This is a reference quote, not a payment, balance guarantee, or real-time market
 - Changed round: refresh once and review the new quote; the guarded write rejects a changed observation.
 - Rejected signature: nothing is recorded; reconnect or retry only after reviewing the quote.
 - Pending or indexing delay: controls remain guarded, and a share URL waits for the receipt without submitting another transaction.
-- Altered receipt: the standalone verifier reports an invalid commitment rather than presenting it as confirmed; stored-state proof is a separate on-chain check.
+- Altered receipt: the standalone verifier reports an invalid commitment rather than presenting it as confirmed; the stored-state comparison is separate. A consistently recomputed forged copy can pass local arithmetic and commitment checks, but it still reports `mismatch` against the genuine stored commitment.
 
 The page keeps calculation-only, confirmed, unavailable, and invalid states visibly distinct. Executable guidance points to `QuoteProofRegistry.test.ts`, `quoteReceipt.test.ts`, and `npm run verify:quote`.
 
@@ -131,6 +131,8 @@ curl -i "http://localhost:3000/api/quote/preview?cents=100"
 Expected result: HTTP `200` and JSON with decimal-string fields `nonce`, `roundId`, `price`, `decimals`, `observedAt`, and `tinybars`. A `400` means the cents query is invalid; a `502` means the configured reference RPC is unavailable. HTTP `200` alone is not enough—the response must contain those fields and the page must render the corresponding live preview values.
 
 To inspect the historical confirmed receipt in a fresh browser session, open the [share route](http://localhost:3000/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). Confirm the `Confirmed on Hedera testnet` badge, event-bound receipt fields, transaction link, and Mirror Node link. Use `Export receipt JSON` to compare the downloaded commitment and quote fields with the displayed event; `Copy share link` must reproduce the same `?tx=` route. To exercise tamper handling, change only the exported commitment in a temporary copy and run the standalone verifier; it must return exit code `2` and `valid: false`. This is read-only and does not send another transaction.
+
+When an event-bound receipt is visible, `Compare stored commitment` exercises the second, independent check. The API accepts `{ "receipt": <receipt-json> }` at `POST /api/quote/compare`; it first runs the offline verifier, then reads `getCommitment` and `isStoredCommitment` from the configured registry. A genuine receipt should produce `valid` / `match`; a simple tamper should produce `invalid` / `not_run`; a recomputed forged copy should produce `valid` / `mismatch`; and an unknown issuer/nonce should produce `valid` / `not_found`. A failed RPC is surfaced as `provider_error` without turning a local result into on-chain proof.
 
 ## Environment variables
 
@@ -160,6 +162,8 @@ All are optional for the wallet-free preview unless noted.
 - `packages/hardhat/scripts/verifyQuote.ts` — standalone verifier
 - `packages/nextjs/components/QuoteProofExperience.tsx` — focused UI
 - `packages/nextjs/app/api/quote/preview/route.ts` — wallet-free live preview read
+- `packages/nextjs/app/api/quote/compare/route.ts` — read-only local-versus-stored receipt comparison
+- `packages/hardhat/utils/quoteReceiptComparison.ts` — stored commitment status helper
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
 - `SUBMISSION-DRAFT.md` — proposed repository, exact external scaffold command, and owner-gated release checklist

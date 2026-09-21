@@ -83,6 +83,18 @@ type ReceiptProof = {
   blockNumber: bigint;
 };
 
+type StoredComparisonResponse = {
+  localConsistency: {
+    status: "valid" | "invalid" | "wrong_context";
+    errors: string[];
+  };
+  recordedComparison: {
+    status: "match" | "mismatch" | "not_found" | "wrong_context" | "provider_error" | "not_run";
+    storedCommitment?: string;
+    error?: string;
+  };
+};
+
 function normalizePreviewQuote(data: unknown): PreviewQuote | undefined {
   if (Array.isArray(data) && data.length >= 6) {
     const values = data.slice(0, 6);
@@ -114,6 +126,19 @@ function formatPrice(price: bigint, decimals: bigint): string {
 
 function shortHash(value: string): string {
   return `${value.slice(0, 10)}…${value.slice(-8)}`;
+}
+
+function comparisonStatusLabel(status: StoredComparisonResponse["recordedComparison"]["status"] | "valid" | "invalid") {
+  return {
+    valid: "Locally consistent",
+    invalid: "Local checks failed",
+    match: "Stored commitment matches",
+    mismatch: "Stored commitment differs",
+    not_found: "No stored commitment",
+    wrong_context: "Trusted context rejected",
+    provider_error: "Provider unavailable",
+    not_run: "Not run",
+  }[status];
 }
 
 function friendlyWriteError(error: unknown): string {
@@ -201,6 +226,9 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
   const [sharedHash, setSharedHash] = useState<Hash>();
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "reverted" | "unavailable">("idle");
   const [proof, setProof] = useState<ReceiptProof>();
+  const [comparison, setComparison] = useState<StoredComparisonResponse>();
+  const [comparisonError, setComparisonError] = useState<string>();
+  const [isComparing, setIsComparing] = useState(false);
   const [copied, setCopied] = useState(false);
   const activeHash = txHash ?? sharedHash;
 
@@ -271,6 +299,26 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     URL.revokeObjectURL(url);
   };
 
+  const compareStoredReceipt = async () => {
+    if (!proof || isComparing) return;
+    setIsComparing(true);
+    setComparisonError(undefined);
+    try {
+      const response = await fetch("/api/quote/compare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ receipt: serializeReceipt(proof) }),
+      });
+      const payload = (await response.json()) as StoredComparisonResponse;
+      if (!response.ok) throw new Error("The receipt comparison request failed");
+      setComparison(payload);
+    } catch (error) {
+      setComparisonError(error instanceof Error ? error.message : "The receipt comparison request failed");
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
   return (
     <section
       aria-labelledby="receipt-heading"
@@ -337,6 +385,56 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
             are available as independent references. Standalone verification is calculation-checked; it does not replace
             the on-chain state check.
           </p>
+        </div>
+      ) : null}
+
+      {proof ? (
+        <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Two independent checks
+              </p>
+              <p className="m-0 text-sm font-semibold">Compare this receipt with the stored issuer / nonce record</p>
+              <p className="mt-2 text-xs leading-5 text-base-content/60">
+                The first result is local consistency. The second is a read-only comparison against trusted Hedera
+                Testnet registry context; it never signs or submits a transaction.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => void compareStoredReceipt()}
+              disabled={isComparing}
+            >
+              {isComparing ? "Comparing…" : "Compare stored commitment"}
+            </button>
+          </div>
+          {comparison ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
+                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Local consistency</p>
+                <p className="mt-1 m-0 text-sm font-semibold">
+                  {comparisonStatusLabel(comparison.localConsistency.status)}
+                </p>
+                {comparison.localConsistency.errors.length > 0 ? (
+                  <p className="mt-2 m-0 text-xs leading-5 text-error">
+                    {comparison.localConsistency.errors.join("; ")}
+                  </p>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
+                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Recorded state</p>
+                <p className="mt-1 m-0 text-sm font-semibold">
+                  {comparisonStatusLabel(comparison.recordedComparison.status)}
+                </p>
+                {comparison.recordedComparison.error ? (
+                  <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.recordedComparison.error}</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+          {comparisonError ? <p className="mt-3 m-0 text-xs text-error">{comparisonError}</p> : null}
         </div>
       ) : null}
 

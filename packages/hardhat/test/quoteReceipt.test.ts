@@ -7,6 +7,7 @@ import {
   verifyReceiptObject,
   type QuoteReceiptJson,
 } from "../utils/quoteReceipt";
+import { compareStoredCommitment } from "../utils/quoteReceiptComparison";
 
 function makeReceipt(overrides: Partial<QuoteReceiptJson> = {}): QuoteReceiptJson {
   const receipt: QuoteReceiptJson = {
@@ -150,5 +151,26 @@ describe("standalone quote receipt verifier", function () {
       ],
     );
     expect(keccak256(encoded)).to.equal(receipt.commitment);
+  });
+
+  it("separates a consistently forged receipt from the stored commitment", function () {
+    const genuine = makeReceipt();
+    const forged = makeReceipt({ cents: "125", tinybars: "1250000000" });
+    const local = verifyReceiptObject(forged, {
+      expectedChainId: 31337n,
+      expectedRegistry: genuine.registry,
+      expectedOracle: genuine.oracle,
+      expectedIssuer: genuine.issuer,
+    });
+
+    expect(local.valid).to.equal(true);
+    expect(local.level).to.equal("calculation-checked");
+    expect(forged.commitment).to.not.equal(genuine.commitment);
+    expect(compareStoredCommitment(forged.commitment, genuine.commitment)).to.deep.equal({
+      status: "mismatch",
+      storedCommitment: genuine.commitment,
+    });
+    expect(compareStoredCommitment(genuine.commitment, genuine.commitment).status).to.equal("match");
+    expect(compareStoredCommitment(genuine.commitment, `0x${"0".repeat(64)}`).status).to.equal("not_found");
   });
 });
