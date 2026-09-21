@@ -46,6 +46,7 @@ export type VerificationOptions = {
   expectedChainId?: bigint;
   expectedRegistry?: string;
   expectedOracle?: string;
+  expectedIssuer?: string;
 };
 
 type ParsedReceipt = {
@@ -241,6 +242,15 @@ export function verifyReceiptObject(
       }
     } catch {
       errors.push("configured provider is not a valid address");
+    }
+  }
+  if (normalizedOptions.expectedIssuer !== undefined) {
+    try {
+      if (parsed.issuer !== getAddress(normalizedOptions.expectedIssuer)) {
+        errors.push("issuer does not match the configured transaction sender");
+      }
+    } catch {
+      errors.push("configured transaction sender is not a valid address");
     }
   }
   if (parsed.feedId !== FEED_ID.toLowerCase()) errors.push("feedId is not HBAR/USD");

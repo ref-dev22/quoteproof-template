@@ -19,6 +19,7 @@ function main(): void {
     expectedChainId,
     expectedRegistry: getArgument("--expected-registry"),
     expectedOracle: getArgument("--expected-oracle"),
+    expectedIssuer: getArgument("--expected-issuer"),
   });
   console.log(JSON.stringify(result, null, 2));
   if (!result.valid) process.exitCode = 2;

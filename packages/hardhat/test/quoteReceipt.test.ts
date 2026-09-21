@@ -39,6 +39,7 @@ describe("standalone quote receipt verifier", function () {
       expectedChainId: 31337n,
       expectedRegistry: receipt.registry,
       expectedOracle: receipt.oracle,
+      expectedIssuer: receipt.issuer,
     });
     expect(result.valid).to.equal(true);
     expect(result.level).to.equal("calculation-checked");
@@ -76,9 +77,19 @@ describe("standalone quote receipt verifier", function () {
       expectedChainId: 31337n,
       expectedRegistry: receipt.registry,
       expectedOracle: receipt.oracle,
+      expectedIssuer: receipt.issuer,
     });
     expect(result.valid).to.equal(false);
     expect(result.errors).to.include("registry does not match the configured deployment");
+
+    const issuerLookalike = makeReceipt({ issuer: "0x0000000000000000000000000000000000000005" });
+    const issuerResult = verifyReceiptObject(issuerLookalike, {
+      expectedChainId: 31337n,
+      expectedRegistry: receipt.registry,
+      expectedOracle: receipt.oracle,
+      expectedIssuer: receipt.issuer,
+    });
+    expect(issuerResult.errors).to.include("issuer does not match the configured transaction sender");
 
     const oversized = JSON.stringify({ ...receipt, padding: "x".repeat(70_000) });
     expect(() => parseReceiptJson(oversized)).to.throw("exceeds");
