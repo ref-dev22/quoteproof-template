@@ -35,8 +35,9 @@ const hardhatNetwork =
           workerPort: 10001,
         },
         chainId: 296,
+        allowBlocksWithSameTimestamp: true,
       }
-    : { chainId: 31337 };
+    : { chainId: 31337, allowBlocksWithSameTimestamp: true };
 
 const config: HardhatUserConfig = {
   solidity: {

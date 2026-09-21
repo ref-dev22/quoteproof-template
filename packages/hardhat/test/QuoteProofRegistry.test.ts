@@ -126,8 +126,9 @@ describe("QuoteProofRegistry", function () {
     expect(computeReceiptCommitment(receipt)).to.equal(eventCommitment);
     expect(await registry.getCommitment(issuer.address, quote.nonce)).to.equal(eventCommitment);
     expect(await registry.isStoredCommitment(issuer.address, quote.nonce, eventCommitment)).to.equal(true);
+    const network = await ethers.provider.getNetwork();
     const verification = verifyReceiptObject(receipt, {
-      expectedChainId: 31337n,
+      expectedChainId: network.chainId,
       expectedRegistry: String(registry.target),
       expectedOracle: String(mock.target),
       expectedIssuer: issuer.address,
