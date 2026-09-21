@@ -17,7 +17,7 @@ npm run next:lint
 npm run next:build
 ```
 
-Run the wallet-free preview with `npm run next:dev` and open `http://localhost:3000`. The preview and deterministic tests need no wallet, faucet, account key, paid API, or live write. Testnet deployment and receipt creation are owner-authorized, credentialed actions and must stay local:
+Run the wallet-free preview with `npm run next:dev -- --hostname 0.0.0.0 --port 3001` and open `http://localhost:3001`. The preview and deterministic tests need no wallet, faucet, account key, paid API, or live write. Testnet deployment and receipt creation are owner-authorized, credentialed actions and must stay local:
 
 ```bash
 npm run hardhat:account:generate

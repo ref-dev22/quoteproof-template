@@ -2,8 +2,8 @@
 
 This is a read-only walkthrough. It does not connect a wallet, unlock an account, sign, or submit a transaction.
 
-1. **0–10s — Open the experience.** Start the app with `npm run next:dev`, then open the historical share route:
-   `http://localhost:3000/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
+1. **0–10s — Open the experience.** Start the app with `npm run next:dev -- --hostname 0.0.0.0 --port 3001`, then open the historical share route:
+   `http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
 
 2. **10–25s — Show provenance and calculation.** Point to the wallet-free preview: Hedera Testnet chain `296`, Chainlink HBAR/USD, price, observation age, round, ceiling-to-tinybar quantity, feed ID and oracle. Say: “This is a reference quote, not a payment, and preview does not write.”
 

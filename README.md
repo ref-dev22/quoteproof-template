@@ -10,10 +10,10 @@ The preview is wallet-free. A wallet, faucet funds, and a deployment are not nee
 
 ```bash
 npm ci
-npm run next:dev
+npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3000`. The page shows the testnet chain, source, USD per HBAR, observation age, ceiling-to-tinybar quantity, round, feed ID, oracle, and recovery actions. Recording is a separate wallet-gated step. Do not click the write action unless you intend to submit a testnet transaction.
+Open `http://localhost:3001`. The page shows the testnet chain, source, USD per HBAR, observation age, ceiling-to-tinybar quantity, round, feed ID, oracle, and recovery actions. Recording is a separate wallet-gated step. Do not click the write action unless you intend to submit a testnet transaction. Use another explicit port, such as `3002`, for an isolated clean-copy review when port `3001` is already reserved.
 
 The page being reachable is not proof that the live reference read succeeded. Confirm the preview card has a price, round, observation age, and quantity; the card must not say `Reference unavailable`.
 
@@ -79,6 +79,8 @@ npm ci
 # deterministic checks
 npm run hardhat:test
 npm run hardhat:compile
+npm run hardhat:check-types
+npm run hardhat:lint
 npm run next:check-types
 npm run next:lint
 npm run next:build
@@ -86,7 +88,7 @@ npm run next:build
 # local fork workflow, in separate terminals
 npm run hardhat:chain
 npm run hardhat:deploy -- --network localhost
-npm run next:dev
+npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
 Testnet deployment and receipt creation require a Hedera-created ECDSA account and local credentials. Preview and the deterministic contract tests do not.
@@ -142,20 +144,13 @@ Hedera's [EVM/Hardhat documentation](https://docs.hedera.com/hedera/tutorials/sm
 The direct Hardhat verifier can perform the same wallet-free checks without a hosted API or Next.js server. It uses the configured deployment context and a read-only JSON-RPC provider:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- \
-  --input ./quoteproof-receipt.json \
-  --compare-stored \
-  --rpc-url https://testnet.hashio.io/api
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --compare-stored --rpc-url https://testnet.hashio.io/api
 ```
 
 The output keeps `localConsistency` calculation/commitment verification, `historicalOracle` exact-round verification, and `recordedComparison` stored state separate. To check evidence for a quote selected outside the receipt, supply all three expected fields independently:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- \
-  --input ./quoteproof-receipt.json \
-  --expected-commitment 0x<independent-commitment> \
-  --expected-issuer 0x<expected-issuer> \
-  --expected-nonce 0
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-commitment 0x<independent-commitment> --expected-issuer 0x<expected-issuer> --expected-nonce 0
 ```
 
 Without those independent fields, `expectedQuote.status` is `not_supplied`; malformed or incomplete fields are `not_checked`. A genuine different quote can pass its own local and stored checks but fail `expectedQuote`, which is the intended distinction between quote authenticity and evidence for a particular expected quote.
@@ -177,12 +172,12 @@ The page keeps calculation-only, confirmed, unavailable, and invalid states visi
 With the app running, the wallet-free preview endpoint is a direct read-only check:
 
 ```bash
-curl -i "http://localhost:3000/api/quote/preview?cents=100"
+curl -i "http://localhost:3001/api/quote/preview?cents=100"
 ```
 
 Expected result: HTTP `200` and JSON with decimal-string fields `nonce`, `roundId`, `price`, `decimals`, `observedAt`, and `tinybars`. A `400` means the cents query is invalid; a `502` means the configured reference RPC is unavailable. HTTP `200` alone is not enough—the response must contain those fields and the page must render the corresponding live preview values.
 
-To inspect the historical confirmed receipt in a fresh browser session, open the [share route](http://localhost:3000/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). Confirm the `Confirmed on Hedera testnet` badge, event-bound receipt fields, transaction link, and Mirror Node link. Use `Export receipt JSON` to compare the downloaded commitment and quote fields with the displayed event; `Copy share link` must reproduce the same `?tx=` route. To exercise tamper handling, change only the exported commitment in a temporary copy and run the standalone verifier; it must return exit code `2` and `valid: false`. This is read-only and does not send another transaction.
+To inspect the historical confirmed receipt in a fresh browser session, open the [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). Confirm the `Confirmed on Hedera testnet` badge, event-bound receipt fields, transaction link, and Mirror Node link. Use `Export receipt JSON` to compare the downloaded commitment and quote fields with the displayed event; `Copy share link` must reproduce the same `?tx=` route. To exercise tamper handling, change only the exported commitment in a temporary copy and run the standalone verifier; it must return exit code `2` and `valid: false`. This is read-only and does not send another transaction.
 
 When an event-bound receipt is visible, `Compare stored commitment` exercises the read-only comparison. The API accepts `{ "receipt": <receipt-json> }` at `POST /api/quote/compare`; it first runs the offline verifier, then checks the provider chain ID, reads the configured oracle's exact historical round and current decimals, and reads `getCommitment` and `isStoredCommitment` from the configured registry. A genuine receipt should produce local `valid`, historical-oracle `match`, and stored-record `match`; a simple tamper should produce `invalid` / `not_checked` / `not_run`; a recomputed amount forgery can produce `valid` / `match` / `mismatch`; and a recomputed false-price copy should produce `valid` / `mismatch` / `mismatch`. An unknown issuer/nonce should produce `valid` / `match` / `not_found`; a wrong RPC chain is reported as `wrong_network` before registry getters run. Historical source failures are `unavailable`, while provider failures in the registry path are `provider_error`; neither turns local consistency into on-chain proof. Requests are bounded before JSON parsing.
 
@@ -197,7 +192,7 @@ All are optional for the wallet-free preview unless noted.
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | public               | Scaffold fallback project id; replace for your own WalletConnect project                |
 | `HEDERA_MIRROR_TESTNET_URL`             | server               | `https://testnet.mirrornode.hedera.com`                                                 |
 | `HEDERA_MIRROR_MAINNET_URL`             | server               | `https://mainnet.mirrornode.hedera.com`                                                 |
-| `PORT`                                  | local server         | Next.js metadata fallback port, normally `3000`                                         |
+| `PORT`                                  | local server         | Next.js fallback is `3000`; the documented preview command pins `3001`                  |
 | `NEXT_PUBLIC_IGNORE_BUILD_ERROR`        | public build flag    | `false`; diagnostics-only escape hatch, do not use for a release gate                   |
 | `HEDERA_RPC_URL`                        | server               | Hardhat/quote scripts; defaults to the testnet Hashio URL                               |
 | `HEDERA_FORKING`                        | local test flag      | Set `true` for the Hedera-forked Hardhat node/test suite                                |
