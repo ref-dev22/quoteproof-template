@@ -6,7 +6,7 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Repository: `https://github.com/ref-dev22/quoteproof-template`
 - Default branch: `main`
-- Candidate revision: pending next clean local commit
+- Candidate revision: `15d6915`
 - External scaffold command after publication:
 
   ```bash
