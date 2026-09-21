@@ -8,6 +8,10 @@ export const MAX_ORACLE_DECIMALS = 18;
 export const REFERENCE_MAX_AGE = 93_600n;
 export const FEED_ID = keccak256(toUtf8Bytes("HBAR/USD"));
 
+const UINT8_MAX = 2n ** 8n - 1n;
+const UINT80_MAX = 2n ** 80n - 1n;
+const UINT256_MAX = 2n ** 256n - 1n;
+
 const RECEIPT_FIELDS = [
   "schemaVersion",
   "chainId",
@@ -40,6 +44,16 @@ export type VerificationResult = {
   errors: string[];
   computedCommitment?: string;
   expectedTinybars?: string;
+  onChainVerified: false;
+  checks: {
+    expectedChainId: boolean;
+    expectedRegistry: boolean;
+    expectedOracle: boolean;
+    expectedIssuer: boolean;
+    feedId: boolean;
+    arithmetic: boolean;
+    commitment: boolean;
+  };
 };
 
 export type VerificationOptions = {
@@ -87,7 +101,10 @@ function parseAddress(name: string, value: unknown, errors: string[]): string | 
     return undefined;
   }
   const address = getAddress(value);
-  if (address === ZeroAddress) errors.push(`${name} must not be the zero address`);
+  if (address === ZeroAddress) {
+    errors.push(`${name} must not be the zero address`);
+    return undefined;
+  }
   return address;
 }
 
@@ -162,6 +179,25 @@ function parseReceipt(receipt: QuoteReceiptJson, errors: string[]): ParsedReceip
     return undefined;
   }
 
+  if (decimalsValue > UINT8_MAX) errors.push("decimals exceeds uint8 ABI range");
+  if (roundId > UINT80_MAX) errors.push("roundId exceeds uint80 ABI range");
+
+  const uint256Fields: Array<[string, bigint]> = [
+    ["schemaVersion", schemaVersion],
+    ["chainId", chainId],
+    ["nonce", nonce],
+    ["cents", cents],
+    ["price", price],
+    ["observedAt", observedAt],
+    ["recordedAt", recordedAt],
+    ["maximumAge", maximumAge],
+    ["tinybars", tinybars],
+  ];
+  for (const [name, value] of uint256Fields) {
+    if (value > UINT256_MAX) errors.push(`${name} exceeds uint256 ABI range`);
+  }
+  if (errors.length > 0) return undefined;
+
   return {
     schemaVersion,
     chainId,
@@ -216,11 +252,19 @@ export function verifyReceiptObject(
   receipt: QuoteReceiptJson,
   options: bigint | VerificationOptions = {},
 ): VerificationResult {
+  const normalizedOptions: VerificationOptions = typeof options === "bigint" ? { expectedChainId: options } : options;
+  const checks = {
+    expectedChainId: normalizedOptions.expectedChainId !== undefined,
+    expectedRegistry: normalizedOptions.expectedRegistry !== undefined,
+    expectedOracle: normalizedOptions.expectedOracle !== undefined,
+    expectedIssuer: normalizedOptions.expectedIssuer !== undefined,
+    feedId: false,
+    arithmetic: false,
+    commitment: false,
+  };
   const errors: string[] = [];
   const parsed = parseReceipt(receipt, errors);
-  if (!parsed) return { valid: false, level: "invalid", errors };
-
-  const normalizedOptions: VerificationOptions = typeof options === "bigint" ? { expectedChainId: options } : options;
+  if (!parsed) return { valid: false, level: "invalid", errors, onChainVerified: false, checks };
 
   if (parsed.schemaVersion !== SCHEMA_VERSION) errors.push("unsupported schemaVersion");
   if (normalizedOptions.expectedChainId !== undefined && parsed.chainId !== normalizedOptions.expectedChainId) {
@@ -253,6 +297,7 @@ export function verifyReceiptObject(
       errors.push("configured transaction sender is not a valid address");
     }
   }
+  checks.feedId = true;
   if (parsed.feedId !== FEED_ID.toLowerCase()) errors.push("feedId is not HBAR/USD");
   if (parsed.cents < MIN_CENTS || parsed.cents > MAX_CENTS) errors.push("cents is out of bounds");
   if (parsed.roundId === 0n) errors.push("roundId must be positive");
@@ -266,26 +311,35 @@ export function verifyReceiptObject(
   }
 
   const expectedTinybars =
-    parsed.decimals <= MAX_ORACLE_DECIMALS
+    parsed.price > 0n && parsed.decimals <= MAX_ORACLE_DECIMALS
       ? (() => {
           const numerator = parsed.cents * 10n ** BigInt(parsed.decimals + 6);
-          const quotient = numerator / (parsed.price === 0n ? 1n : parsed.price);
-          return numerator % (parsed.price === 0n ? 1n : parsed.price) === 0n ? quotient : quotient + 1n;
+          const quotient = numerator / parsed.price;
+          return numerator % parsed.price === 0n ? quotient : quotient + 1n;
         })()
       : undefined;
+  checks.arithmetic = expectedTinybars !== undefined;
   if (expectedTinybars !== undefined && parsed.tinybars !== expectedTinybars) {
     errors.push("tinybars does not match independent ceiling arithmetic");
   }
 
-  const computedCommitment = computeReceiptCommitment(receipt);
-  if (computedCommitment.toLowerCase() !== parsed.commitment.toLowerCase()) {
-    errors.push("commitment does not match the receipt fields");
+  let computedCommitment: string | undefined;
+  try {
+    computedCommitment = computeReceiptCommitment(receipt);
+    checks.commitment = true;
+    if (computedCommitment.toLowerCase() !== parsed.commitment.toLowerCase()) {
+      errors.push("commitment does not match the receipt fields");
+    }
+  } catch {
+    errors.push("receipt fields cannot be ABI-encoded");
   }
 
   return {
     valid: errors.length === 0,
     level: errors.length === 0 ? "calculation-checked" : "invalid",
     errors,
+    onChainVerified: false,
+    checks,
     computedCommitment,
     expectedTinybars: expectedTinybars?.toString(),
   };

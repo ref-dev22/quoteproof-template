@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import fs from "node:fs";
 import { deployments, ethers } from "hardhat";
-import { FEED_ID } from "../utils/quoteReceipt";
+import { computeReceiptCommitment, verifyReceiptObject, type QuoteReceiptJson } from "../utils/quoteReceipt";
 
 const HEDERA_TESTNET_CHAIN_ID = 296n;
 const MIN_CENTS = 1n;
@@ -41,28 +41,75 @@ async function main() {
   if (!confirmed || confirmed.status !== 1)
     throw new Error("QuoteProof receipt transaction did not confirm successfully");
 
-  const block = await ethers.provider.getBlock(confirmed.blockNumber);
-  if (!block) throw new Error("Confirmed block could not be retrieved");
   const issuer = await signer.getAddress();
-  const commitment = await registry.getCommitment(issuer, preview.nonce);
-  const receipt = {
-    schemaVersion: (await registry.SCHEMA_VERSION()).toString(),
-    chainId: network.chainId.toString(),
-    registry: deployment.address,
-    issuer,
-    nonce: preview.nonce.toString(),
-    cents: cents.toString(),
-    oracle: await registry.oracle(),
-    feedId: FEED_ID,
-    roundId: preview.roundId.toString(),
-    price: preview.price.toString(),
-    decimals: preview.decimals.toString(),
-    observedAt: preview.observedAt.toString(),
-    recordedAt: block.timestamp.toString(),
-    maximumAge: (await registry.maxAge()).toString(),
-    tinybars: preview.tinybars.toString(),
-    commitment,
+  const quoteEvent = confirmed.logs
+    .map(log => {
+      if (log.address.toLowerCase() !== deployment.address.toLowerCase()) return null;
+      try {
+        return registry.interface.parseLog({ topics: [...log.topics], data: log.data });
+      } catch {
+        return null;
+      }
+    })
+    .find(event => event?.name === "QuoteRecorded");
+  if (!quoteEvent) throw new Error("Confirmed receipt did not contain a QuoteRecorded event");
+
+  const eventCommitment = String(quoteEvent.args[0]);
+  const quote = quoteEvent.args[1] as {
+    schemaVersion: bigint;
+    chainId: bigint;
+    registry: string;
+    issuer: string;
+    nonce: bigint;
+    cents: bigint;
+    oracle: string;
+    feedId: string;
+    roundId: bigint;
+    price: bigint;
+    decimals: bigint;
+    observedAt: bigint;
+    recordedAt: bigint;
+    maximumAge: bigint;
+    tinybars: bigint;
   };
+  const receipt: QuoteReceiptJson = {
+    schemaVersion: quote.schemaVersion.toString(),
+    chainId: quote.chainId.toString(),
+    registry: quote.registry,
+    issuer: quote.issuer,
+    nonce: quote.nonce.toString(),
+    cents: quote.cents.toString(),
+    oracle: quote.oracle,
+    feedId: quote.feedId,
+    roundId: quote.roundId.toString(),
+    price: quote.price.toString(),
+    decimals: quote.decimals.toString(),
+    observedAt: quote.observedAt.toString(),
+    recordedAt: quote.recordedAt.toString(),
+    maximumAge: quote.maximumAge.toString(),
+    tinybars: quote.tinybars.toString(),
+    commitment: eventCommitment,
+  };
+  const storedCommitment = await registry.getCommitment(issuer, quote.nonce);
+  if (storedCommitment.toLowerCase() !== eventCommitment.toLowerCase()) {
+    throw new Error("Stored commitment does not match the QuoteRecorded event");
+  }
+  if (!(await registry.isStoredCommitment(issuer, quote.nonce, eventCommitment))) {
+    throw new Error("Confirmed receipt commitment was not stored for the issuer and nonce");
+  }
+  if (computeReceiptCommitment(receipt).toLowerCase() !== eventCommitment.toLowerCase()) {
+    throw new Error("QuoteRecorded event does not match the standalone receipt commitment");
+  }
+  const verification = verifyReceiptObject(receipt, {
+    expectedChainId: network.chainId,
+    expectedRegistry: deployment.address,
+    expectedOracle: await registry.oracle(),
+    expectedIssuer: issuer,
+  });
+  if (!verification.valid) {
+    throw new Error(`Generated receipt failed standalone verification: ${verification.errors.join("; ")}`);
+  }
+
   const outputPath = getArgument("--output") ?? process.env.QUOTE_OUTPUT;
   if (outputPath) fs.writeFileSync(outputPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 

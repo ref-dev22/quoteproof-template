@@ -44,6 +44,16 @@ describe("standalone quote receipt verifier", function () {
     expect(result.valid).to.equal(true);
     expect(result.level).to.equal("calculation-checked");
     expect(result.expectedTinybars).to.equal("1000000000");
+    expect(result.onChainVerified).to.equal(false);
+    expect(result.checks).to.deep.equal({
+      expectedChainId: true,
+      expectedRegistry: true,
+      expectedOracle: true,
+      expectedIssuer: true,
+      feedId: true,
+      arithmetic: true,
+      commitment: true,
+    });
   });
 
   it("rejects altered bound fields and malformed schema fields", function () {
@@ -93,6 +103,24 @@ describe("standalone quote receipt verifier", function () {
 
     const oversized = JSON.stringify({ ...receipt, padding: "x".repeat(70_000) });
     expect(() => parseReceiptJson(oversized)).to.throw("exceeds");
+  });
+
+  it("returns structured invalid results for hostile zero-address and ABI-range inputs", function () {
+    const receipt = makeReceipt();
+    const hostileCases: Array<[keyof QuoteReceiptJson, string, string]> = [
+      ["registry", "0x0000000000000000000000000000000000000000", "registry must not be the zero address"],
+      ["issuer", "0x0000000000000000000000000000000000000000", "issuer must not be the zero address"],
+      ["oracle", "0x0000000000000000000000000000000000000000", "oracle must not be the zero address"],
+      ["decimals", "256", "decimals exceeds uint8 ABI range"],
+      ["roundId", (2n ** 80n).toString(), "roundId exceeds uint80 ABI range"],
+      ["price", (2n ** 256n).toString(), "price exceeds uint256 ABI range"],
+    ];
+
+    for (const [field, value, expectedError] of hostileCases) {
+      const result = verifyReceiptObject({ ...receipt, [field]: value });
+      expect(result.valid, field).to.equal(false);
+      expect(result.errors, field).to.include(expectedError);
+    }
   });
 
   it("uses the same ABI tuple shape as the registry commitment", function () {

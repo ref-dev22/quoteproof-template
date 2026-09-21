@@ -60,6 +60,26 @@ You need a deployer account with HBAR on the target network. Without funds, depl
    npm run verify:contract -w @sh/hardhat -- -- HederaToken testnet 0xYourContractAddress
    ```
 
+## QuoteProof receipts
+
+The testnet-only QuoteProof path deploys the registry and creates one receipt with a single local password unlock:
+
+```bash
+npm run quote:e2e -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
+```
+
+The creator rebuilds the receipt from the confirmed `QuoteRecorded` event and refuses to write it unless the event, stored commitment and standalone verifier agree. Verify a receipt with the deployed context bound explicitly:
+
+```bash
+npm run verify:quote -- --input ./quoteproof-receipt.json \
+  --expected-chain-id 296 \
+  --expected-registry 0xDeployedQuoteProofRegistry \
+  --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a \
+  --expected-issuer 0xReceiptIssuer
+```
+
+Without `--allow-foreign-context`, the verifier defaults to Hedera testnet chain `296` and loads the `deployments/hederaTestnet/QuoteProofRegistry.json` context when registry/oracle flags are omitted. `--allow-foreign-context` is only for deliberate offline fixtures. The result always reports `onChainVerified: false`; the standalone command checks schema, context bindings supplied to it, arithmetic and commitment, but does not query an RPC or explorer.
+
 ## Layout
 
 - `contracts/` — Solidity sources
