@@ -7,15 +7,19 @@ Hardhat config, contracts, deploy scripts, tests, and Hashscan verification for 
 From the repo root, use the explicit `hardhat:*` scripts for this package. Inside `packages/hardhat`, use the unprefixed package-local scripts.
 
 1. **Start the local chain** (terminal 1, from repo root):
+
    ```bash
    npm run hardhat:chain
    ```
+
    This starts `hardhat node` with **Hedera testnet forking** (`HEDERA_FORKING=true` and `@hashgraph/system-contracts-forking`). JSON-RPC is served at **http://127.0.0.1:8545**.
 
 2. **Deploy to the running fork** (terminal 2):
+
    ```bash
    npm run hardhat:deploy --network localhost
    ```
+
    Use **`localhost`** so Hardhat connects to the long-running node on port 8545.
 
    **`npm run hardhat:deploy` without `--network localhost`** uses the default network `hardhat`, which is the **in-process ephemeral** Hardhat network—**not** the same process as `npm run hardhat:chain`. For deploys against the forked node you started in step 1, always pass **`--network localhost`** while that node is running.
@@ -30,26 +34,34 @@ From the repo root, use the explicit `hardhat:*` scripts for this package. Insid
 You need a deployer account with HBAR on the target network. Without funds, deploy and verify will fail with "Sender account not found".
 
 1. **Generate or import an account** (from the repo root):
+
    ```bash
    npm run hardhat:account:generate
    ```
+
    or
+
    ```bash
    npm run hardhat:account:import
    ```
+
    The encrypted key is stored in `packages/hardhat/.env`.
 
 2. **Fund the account on testnet:**  
    Use the [Hedera Portal faucet](https://portal.hedera.com/faucet) to receive testnet HBAR.
 
 3. **Deploy to Hedera testnet** (from repo root):
+
    ```bash
    npm run hardhat:deploy --network hederaTestnet
    ```
+
    or
+
    ```bash
    npm run hardhat:deploy --network hedera_testnet
    ```
+
    You will be prompted to enter the password to decrypt your deployer key.
 
 4. **Verify on Hashscan** (uses deployment JSON under `deployments/<network>/`, which includes compiler metadata and sources):
@@ -75,10 +87,12 @@ npm run verify:quote -- --input ./quoteproof-receipt.json \
   --expected-chain-id 296 \
   --expected-registry 0xDeployedQuoteProofRegistry \
   --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a \
-  --expected-issuer 0xReceiptIssuer
+  --expected-issuer 0xReceiptIssuer \
+  --compare-stored \
+  --rpc-url https://testnet.hashio.io/api
 ```
 
-Without `--allow-foreign-context`, the verifier defaults to Hedera testnet chain `296` and loads the `deployments/hederaTestnet/QuoteProofRegistry.json` context when registry/oracle flags are omitted. `--allow-foreign-context` is only for deliberate offline fixtures. The result always reports `onChainVerified: false`; the standalone command checks schema, context bindings supplied to it, arithmetic and commitment, but does not query an RPC or explorer.
+Without `--allow-foreign-context`, the verifier defaults to Hedera testnet chain `296` and loads the `deployments/hederaTestnet/QuoteProofRegistry.json` context when registry/oracle flags are omitted. `--allow-foreign-context` is only for deliberate offline fixtures. The result always reports `onChainVerified: false`; `--compare-stored` adds direct read-only registry and historical-oracle calls without the Next.js server. The optional `--expected-commitment`, `--expected-issuer`, and `--expected-nonce` fields must come from an independent reference and report `not_supplied`, `not_checked`, `match`, or `mismatch`.
 
 ## Layout
 

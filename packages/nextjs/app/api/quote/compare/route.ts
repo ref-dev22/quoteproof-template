@@ -3,7 +3,7 @@ import {
   parseReceiptJson,
   verifyReceiptObject,
 } from "../../../../../hardhat/utils/quoteReceipt";
-import { compareStoredCommitment } from "../../../../../hardhat/utils/quoteReceiptComparison";
+import { compareHistoricalOracle, compareStoredCommitment } from "../../../../../hardhat/utils/quoteReceiptComparison";
 import { type Hex, decodeFunctionResult, encodeFunctionData } from "viem";
 
 const RPC_URL = process.env.NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL || "https://testnet.hashio.io/api";
@@ -294,24 +294,12 @@ export async function POST(request: Request) {
         data: decimalsRaw,
       }) as bigint | number;
       const currentDecimals = BigInt(currentDecimalsResult);
-      const mismatches: string[] = [];
-      if (returnedRoundId !== BigInt(receipt.roundId)) mismatches.push("historical roundId differs from the receipt");
-      if (answer !== BigInt(receipt.price)) mismatches.push("historical answer differs from the receipt");
-      if (returnedObservedAt !== BigInt(receipt.observedAt)) {
-        mismatches.push("historical updatedAt differs from the receipt");
-      }
-      if (currentDecimals !== BigInt(receipt.decimals)) {
-        mismatches.push("current oracle decimals differ from the receipt metadata");
-      }
-      historicalOracle = {
-        status: mismatches.length === 0 ? "match" : "mismatch",
-        requestedRoundId: receipt.roundId,
-        returnedRoundId: returnedRoundId.toString(),
-        returnedPrice: answer.toString(),
-        returnedObservedAt: returnedObservedAt.toString(),
-        currentDecimals: currentDecimals.toString(),
-        ...(mismatches.length > 0 ? { error: mismatches.join("; ") } : {}),
-      };
+      historicalOracle = compareHistoricalOracle(receipt, {
+        roundId: returnedRoundId.toString(),
+        price: answer.toString(),
+        observedAt: returnedObservedAt.toString(),
+        decimals: currentDecimals.toString(),
+      });
     } catch (error) {
       historicalOracle = {
         status: "unavailable",

@@ -7,7 +7,7 @@ import {
   verifyReceiptObject,
   type QuoteReceiptJson,
 } from "../utils/quoteReceipt";
-import { compareStoredCommitment } from "../utils/quoteReceiptComparison";
+import { compareExpectedQuote, compareStoredCommitment } from "../utils/quoteReceiptComparison";
 
 function makeReceipt(overrides: Partial<QuoteReceiptJson> = {}): QuoteReceiptJson {
   const receipt: QuoteReceiptJson = {
@@ -172,5 +172,43 @@ describe("standalone quote receipt verifier", function () {
     });
     expect(compareStoredCommitment(genuine.commitment, genuine.commitment).status).to.equal("match");
     expect(compareStoredCommitment(genuine.commitment, `0x${"0".repeat(64)}`).status).to.equal("not_found");
+  });
+
+  it("requires an independent expected quote reference and rejects a genuine different quote", function () {
+    const quoteA = makeReceipt();
+    const quoteB = makeReceipt({
+      issuer: "0x0000000000000000000000000000000000000004",
+      nonce: "1",
+      cents: "125",
+      tinybars: "1250000000",
+    });
+    expect(verifyReceiptObject(quoteA, { expectedChainId: 31337n }).valid).to.equal(true);
+    expect(verifyReceiptObject(quoteB, { expectedChainId: 31337n }).valid).to.equal(true);
+    expect(compareStoredCommitment(quoteA.commitment, quoteA.commitment).status).to.equal("match");
+    expect(compareStoredCommitment(quoteB.commitment, quoteB.commitment).status).to.equal("match");
+
+    expect(compareExpectedQuote(quoteA, undefined)).to.deep.equal({
+      status: "not_supplied",
+      message: "No independent expected quote reference was supplied",
+    });
+    const incomplete = compareExpectedQuote(quoteA, { commitment: quoteA.commitment });
+    expect(incomplete.status).to.equal("not_checked");
+    if (incomplete.status === "not_checked") {
+      expect(incomplete.errors).to.deep.equal(["expected issuer is required", "expected nonce is required"]);
+    }
+    expect(
+      compareExpectedQuote(quoteA, { commitment: quoteA.commitment, issuer: quoteA.issuer, nonce: quoteA.nonce })
+        .status,
+    ).to.equal("match");
+    const rejected = compareExpectedQuote(quoteB, {
+      commitment: quoteA.commitment,
+      issuer: quoteA.issuer,
+      nonce: quoteA.nonce,
+    });
+    expect(rejected.status).to.equal("mismatch");
+    if (rejected.status === "mismatch") {
+      expect(rejected.errors).to.have.length(3);
+      expect(rejected.errors.join("; ")).to.contain("independent expected commitment");
+    }
   });
 });
