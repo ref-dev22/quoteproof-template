@@ -95,6 +95,15 @@ type StoredComparisonResponse = {
     error?: string;
     providerChainId?: string;
   };
+  historicalOracle: {
+    status: "match" | "mismatch" | "unavailable" | "not_checked";
+    requestedRoundId: string;
+    returnedRoundId?: string;
+    returnedPrice?: string;
+    returnedObservedAt?: string;
+    currentDecimals?: string;
+    error?: string;
+  };
 };
 
 function normalizePreviewQuote(data: unknown): PreviewQuote | undefined {
@@ -141,6 +150,15 @@ function comparisonStatusLabel(status: StoredComparisonResponse["recordedCompari
     wrong_network: "Provider network rejected",
     provider_error: "Provider unavailable",
     not_run: "Not run",
+  }[status];
+}
+
+function historicalOracleStatusLabel(status: StoredComparisonResponse["historicalOracle"]["status"]) {
+  return {
+    match: "Historical observation matches",
+    mismatch: "Historical observation differs",
+    unavailable: "Historical observation unavailable",
+    not_checked: "Not checked",
   }[status];
 }
 
@@ -379,12 +397,12 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Two independent checks
+                Three read-only checks
               </p>
               <p className="m-0 text-sm font-semibold">Compare this receipt with the stored issuer / nonce record</p>
               <p className="mt-2 text-xs leading-5 text-base-content/60">
-                The first result is local consistency. The second is a read-only comparison against trusted Hedera
-                Testnet registry context; it never signs or submits a transaction.
+                The results are local consistency, the configured oracle&apos;s exact historical round, and the trusted
+                Hedera Testnet registry record. They never sign or submit a transaction.
               </p>
             </div>
             <button
@@ -397,7 +415,7 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
             </button>
           </div>
           {comparison ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-base-300 bg-base-100 p-3">
                 <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Local consistency</p>
                 <p className="mt-1 m-0 text-sm font-semibold">
@@ -416,6 +434,24 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
                 </p>
                 {comparison.recordedComparison.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.recordedComparison.error}</p>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
+                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Historical oracle</p>
+                <p className="mt-1 m-0 text-sm font-semibold">
+                  {historicalOracleStatusLabel(comparison.historicalOracle.status)}
+                </p>
+                <p className="mt-2 m-0 text-xs leading-5 text-base-content/60">
+                  Round {comparison.historicalOracle.requestedRoundId}
+                  {comparison.historicalOracle.returnedRoundId
+                    ? ` · returned ${comparison.historicalOracle.returnedRoundId}`
+                    : ""}
+                  {comparison.historicalOracle.currentDecimals
+                    ? ` · current decimals ${comparison.historicalOracle.currentDecimals}`
+                    : ""}
+                </p>
+                {comparison.historicalOracle.error ? (
+                  <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.historicalOracle.error}</p>
                 ) : null}
               </div>
             </div>
@@ -621,8 +657,8 @@ const QuoteProofExperience = () => {
 
       <main className="mx-auto -mt-8 w-full max-w-5xl px-5 pb-16">
         <section aria-labelledby="quote-heading" className="rounded-3xl bg-base-100 p-6 shadow-xl sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
+          <div className="grid min-w-0 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <SparklesIcon className="h-5 w-5" aria-hidden="true" />
                 Wallet-free preview
@@ -642,7 +678,7 @@ const QuoteProofExperience = () => {
                 <input
                   id="usd-input"
                   inputMode="decimal"
-                  className="w-full bg-transparent px-2 py-3 text-2xl font-semibold outline-none"
+                  className="min-w-0 w-full bg-transparent px-2 py-3 text-2xl font-semibold outline-none"
                   value={usdInput}
                   onChange={event => setUsdInput(event.target.value)}
                   aria-describedby="usd-help"
@@ -661,9 +697,9 @@ const QuoteProofExperience = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl bg-base-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
+            <div className="min-w-0 rounded-3xl bg-base-200 p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
                   <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-base-content/50">
                     Observed reference
                   </p>

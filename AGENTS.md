@@ -36,10 +36,10 @@ Never paste keys or encrypted keystores into chat, source, browser fields, or co
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — pure comparison of a receipt commitment with a validated stored commitment.
 - `packages/nextjs/components/QuoteProofExperience.tsx` — wallet-free preview, guarded wallet write, event-bound receipt, share/export UI, and read-only comparison display.
 - `packages/nextjs/app/api/quote/preview/route.ts` — server-side live reference read; no wallet-originating `from` address.
-- `packages/nextjs/app/api/quote/compare/route.ts` — bounded JSON request, offline verification, RPC `eth_chainId` check, then read-only `getCommitment`/`isStoredCommitment` calls.
+- `packages/nextjs/app/api/quote/compare/route.ts` — bounded JSON request, offline verification, RPC `eth_chainId` check, then read-only stored-commitment and exact historical-oracle-round checks.
 - `packages/hardhat/test/QuoteProofRegistry.test.ts`, `quoteReceipt.test.ts`, and `quoteCompareRoute.test.ts` — contract, verifier, adversarial, and route-guard coverage.
 
-The trusted release context is Hedera Testnet chain `296`, registry `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`, and Chainlink oracle `0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`. Offline consistency is not recorded-state proof: a recomputed forged receipt can be locally valid but must fail the stored-commitment comparison. Provider errors, wrong network, wrong context, missing records, and local receipt errors remain distinct.
+The trusted release context is Hedera Testnet chain `296`, registry `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`, and Chainlink oracle `0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`. Offline consistency is not recorded-state proof: a recomputed amount forgery can match the exact historical oracle observation but must fail the stored-commitment comparison; a false-price copy must fail both. Provider errors, unavailable/not-checked historical observations, wrong network, wrong context, missing records, and local receipt errors remain distinct.
 
 ## Change guidance
 

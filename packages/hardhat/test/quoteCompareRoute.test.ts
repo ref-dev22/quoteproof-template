@@ -37,6 +37,66 @@ function requestWithBody(body: string, headers: HeadersInit = { "content-type": 
   });
 }
 
+function word(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
+
+function roundDataResult(roundId: bigint, answer: bigint, observedAt: bigint): string {
+  return `0x${word(roundId)}${word(answer)}${word(observedAt - 1n)}${word(observedAt)}${word(roundId)}`;
+}
+
+function decimalsResult(decimals: bigint): string {
+  return `0x${word(decimals)}`;
+}
+
+function installRpcMock(
+  receipt: QuoteReceiptJson,
+  options: { storedCommitment?: string; historical?: { roundId?: bigint; answer?: bigint; observedAt?: bigint } } = {},
+): string[] {
+  const methods: string[] = [];
+  globalThis.fetch = (async (_input, init) => {
+    const payload = JSON.parse(String(init?.body)) as { method: string };
+    methods.push(payload.method);
+    if (payload.method === "eth_chainId") {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 0, result: "0x128" }), { status: 200 });
+    }
+    const callIndex = methods.filter(method => method === "eth_call").length;
+    if (callIndex === 1) {
+      return new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: options.storedCommitment ?? receipt.commitment }),
+        {
+          status: 200,
+        },
+      );
+    }
+    if (callIndex === 2) {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 2, result: `0x${word(1n)}` }), { status: 200 });
+    }
+    if (callIndex === 3) {
+      const historical = options.historical ?? {};
+      return new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          result: roundDataResult(
+            historical.roundId ?? BigInt(receipt.roundId),
+            historical.answer ?? BigInt(receipt.price),
+            historical.observedAt ?? BigInt(receipt.observedAt),
+          ),
+        }),
+        { status: 200 },
+      );
+    }
+    if (callIndex === 4) {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 4, result: decimalsResult(BigInt(receipt.decimals)) }), {
+        status: 200,
+      });
+    }
+    throw new Error(`Unexpected RPC call ${callIndex}`);
+  }) as typeof fetch;
+  return methods;
+}
+
 describe("quote comparison route guards", function () {
   const originalFetch = globalThis.fetch;
 
@@ -65,6 +125,116 @@ describe("quote comparison route guards", function () {
     expect(payload.localConsistency.status).to.equal("valid");
     expect(payload.recordedComparison).to.deep.include({ status: "wrong_network", providerChainId: "0x127" });
     expect(methods).to.deep.equal(["eth_chainId"]);
+  });
+
+  it("reports matching local, historical-oracle, and stored-record checks", async function () {
+    const receipt = makeReceipt();
+    const methods = installRpcMock(receipt);
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+      historicalOracle: { status: string; returnedPrice?: string; currentDecimals?: string };
+    };
+
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("match");
+    expect(payload.historicalOracle).to.deep.include({
+      status: "match",
+      returnedPrice: receipt.price,
+      currentDecimals: receipt.decimals,
+    });
+    expect(methods).to.deep.equal(["eth_chainId", "eth_call", "eth_call", "eth_call", "eth_call"]);
+  });
+
+  it("keeps a recomputed amount forgery source-matching but ledger-mismatched", async function () {
+    const original = makeReceipt();
+    const forged = { ...original, cents: "200", tinybars: "2000000000" };
+    forged.commitment = computeReceiptCommitment(forged);
+    installRpcMock(forged, { storedCommitment: original.commitment });
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: forged })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+      historicalOracle: { status: string };
+    };
+
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.historicalOracle.status).to.equal("match");
+    expect(payload.recordedComparison.status).to.equal("mismatch");
+  });
+
+  it("rejects a recomputed false-price copy at the oracle and stored-record checks", async function () {
+    const original = makeReceipt();
+    const forged = { ...original, price: "11000000", tinybars: "909090910" };
+    forged.commitment = computeReceiptCommitment(forged);
+    installRpcMock(forged, { storedCommitment: original.commitment, historical: { answer: BigInt(original.price) } });
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: forged })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+      historicalOracle: { status: string; error?: string };
+    };
+
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("mismatch");
+    expect(payload.historicalOracle.status).to.equal("mismatch");
+    expect(payload.historicalOracle.error).to.contain("historical answer differs");
+  });
+
+  it("reports a historical round mismatch without changing local or ledger results", async function () {
+    const receipt = makeReceipt();
+    installRpcMock(receipt, { historical: { roundId: 2n } });
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+      historicalOracle: { status: string; error?: string };
+    };
+
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("match");
+    expect(payload.historicalOracle.status).to.equal("mismatch");
+    expect(payload.historicalOracle.error).to.contain("historical roundId differs");
+  });
+
+  it("reports the historical source as unavailable while preserving stored state", async function () {
+    const receipt = makeReceipt();
+    const methods: string[] = [];
+    globalThis.fetch = (async (_input, init) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string };
+      methods.push(payload.method);
+      if (payload.method === "eth_chainId") {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 0, result: "0x128" }), { status: 200 });
+      }
+      const callIndex = methods.filter(method => method === "eth_call").length;
+      if (callIndex === 1) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: receipt.commitment }), { status: 200 });
+      }
+      if (callIndex === 2) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 2, result: `0x${word(1n)}` }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 3, error: { message: "historical round unavailable" } }),
+        {
+          status: 200,
+        },
+      );
+    }) as typeof fetch;
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt })));
+    const payload = (await response.json()) as {
+      recordedComparison: { status: string };
+      historicalOracle: { status: string; error?: string };
+    };
+
+    expect(payload.recordedComparison.status).to.equal("match");
+    expect(payload.historicalOracle.status).to.equal("unavailable");
+    expect(payload.historicalOracle.error).to.equal("historical round unavailable");
   });
 
   it("returns 413 for a chunked oversized wrapper before JSON parsing", async function () {

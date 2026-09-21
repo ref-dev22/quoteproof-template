@@ -40,6 +40,32 @@ const isStoredCommitmentAbi = [
   },
 ] as const;
 
+const getRoundDataAbi = [
+  {
+    type: "function",
+    name: "getRoundData",
+    stateMutability: "view",
+    inputs: [{ name: "roundId", type: "uint80" }],
+    outputs: [
+      { name: "roundId", type: "uint80" },
+      { name: "answer", type: "int256" },
+      { name: "startedAt", type: "uint256" },
+      { name: "updatedAt", type: "uint256" },
+      { name: "answeredInRound", type: "uint80" },
+    ],
+  },
+] as const;
+
+const decimalsAbi = [
+  {
+    type: "function",
+    name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "decimals", type: "uint8" }],
+  },
+] as const;
+
 type ComparisonResponse = {
   localConsistency: {
     status: "valid" | "invalid" | "wrong_context";
@@ -50,6 +76,15 @@ type ComparisonResponse = {
     storedCommitment?: string;
     error?: string;
     providerChainId?: string;
+  };
+  historicalOracle: {
+    status: "match" | "mismatch" | "unavailable" | "not_checked";
+    requestedRoundId: string;
+    returnedRoundId?: string;
+    returnedPrice?: string;
+    returnedObservedAt?: string;
+    currentDecimals?: string;
+    error?: string;
   };
   context: { chainId: string; registry: string; oracle: string };
 };
@@ -113,6 +148,7 @@ function invalidResponse(error: string): ComparisonResponse {
   return {
     localConsistency: { status: "invalid", errors: [error] },
     recordedComparison: { status: "not_run" },
+    historicalOracle: { status: "not_checked", requestedRoundId: "0" },
     context: { chainId: EXPECTED_CHAIN_ID.toString(), registry: EXPECTED_REGISTRY, oracle: EXPECTED_ORACLE },
   };
 }
@@ -136,12 +172,16 @@ async function rpcRequest<T>(method: string, params: unknown[], id: number): Pro
   return payload.result;
 }
 
-async function rpcCall(data: Hex, id: number): Promise<Hex> {
-  const result = await rpcRequest<unknown>("eth_call", [{ to: EXPECTED_REGISTRY, data }, "latest"], id);
+async function rpcCall(to: `0x${string}`, data: Hex, id: number): Promise<Hex> {
+  const result = await rpcRequest<unknown>("eth_call", [{ to, data }, "latest"], id);
   if (typeof result !== "string" || !/^0x[0-9a-fA-F]*$/.test(result)) {
     throw new Error("Reference provider returned an invalid call result");
   }
   return result as Hex;
+}
+
+function historicalOracleNotChecked(roundId: string): ComparisonResponse["historicalOracle"] {
+  return { status: "not_checked", requestedRoundId: roundId };
 }
 
 async function rpcChainId(): Promise<{ value: bigint; hex: string }> {
@@ -179,6 +219,7 @@ export async function POST(request: Request) {
   const responseBase: ComparisonResponse = {
     localConsistency: { status: localStatus, errors: local.errors },
     recordedComparison: { status: localStatus === "wrong_context" ? "wrong_context" : "not_run" },
+    historicalOracle: historicalOracleNotChecked(receipt.roundId),
     context: { chainId: EXPECTED_CHAIN_ID.toString(), registry: EXPECTED_REGISTRY, oracle: EXPECTED_ORACLE },
   };
 
@@ -200,6 +241,7 @@ export async function POST(request: Request) {
     const issuer = receipt.issuer as `0x${string}`;
     const nonce = BigInt(receipt.nonce);
     const storedRaw = await rpcCall(
+      EXPECTED_REGISTRY,
       encodeFunctionData({ abi: getCommitmentAbi, functionName: "getCommitment", args: [issuer, nonce] }),
       1,
     );
@@ -211,6 +253,7 @@ export async function POST(request: Request) {
     if (!BYTES32_RE.test(storedCommitment)) throw new Error("Reference provider returned an invalid commitment");
 
     const storedCheckRaw = await rpcCall(
+      EXPECTED_REGISTRY,
       encodeFunctionData({
         abi: isStoredCommitmentAbi,
         functionName: "isStoredCommitment",
@@ -228,9 +271,59 @@ export async function POST(request: Request) {
       throw new Error("Reference provider returned an inconsistent stored commitment");
     }
 
+    let historicalOracle = historicalOracleNotChecked(receipt.roundId);
+    try {
+      const roundRaw = await rpcCall(
+        EXPECTED_ORACLE,
+        encodeFunctionData({ abi: getRoundDataAbi, functionName: "getRoundData", args: [BigInt(receipt.roundId)] }),
+        3,
+      );
+      const [returnedRoundId, answer, , returnedObservedAt] = decodeFunctionResult({
+        abi: getRoundDataAbi,
+        functionName: "getRoundData",
+        data: roundRaw,
+      }) as readonly [bigint, bigint, bigint, bigint, bigint];
+      const decimalsRaw = await rpcCall(
+        EXPECTED_ORACLE,
+        encodeFunctionData({ abi: decimalsAbi, functionName: "decimals" }),
+        4,
+      );
+      const currentDecimalsResult = decodeFunctionResult({
+        abi: decimalsAbi,
+        functionName: "decimals",
+        data: decimalsRaw,
+      }) as bigint | number;
+      const currentDecimals = BigInt(currentDecimalsResult);
+      const mismatches: string[] = [];
+      if (returnedRoundId !== BigInt(receipt.roundId)) mismatches.push("historical roundId differs from the receipt");
+      if (answer !== BigInt(receipt.price)) mismatches.push("historical answer differs from the receipt");
+      if (returnedObservedAt !== BigInt(receipt.observedAt)) {
+        mismatches.push("historical updatedAt differs from the receipt");
+      }
+      if (currentDecimals !== BigInt(receipt.decimals)) {
+        mismatches.push("current oracle decimals differ from the receipt metadata");
+      }
+      historicalOracle = {
+        status: mismatches.length === 0 ? "match" : "mismatch",
+        requestedRoundId: receipt.roundId,
+        returnedRoundId: returnedRoundId.toString(),
+        returnedPrice: answer.toString(),
+        returnedObservedAt: returnedObservedAt.toString(),
+        currentDecimals: currentDecimals.toString(),
+        ...(mismatches.length > 0 ? { error: mismatches.join("; ") } : {}),
+      };
+    } catch (error) {
+      historicalOracle = {
+        status: "unavailable",
+        requestedRoundId: receipt.roundId,
+        error: error instanceof Error ? error.message : "Historical oracle observation unavailable",
+      };
+    }
+
     return Response.json({
       ...responseBase,
       recordedComparison: storedComparison,
+      historicalOracle,
     });
   } catch (error) {
     return Response.json({

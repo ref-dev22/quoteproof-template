@@ -28,8 +28,8 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Genuine Hedera Testnet deployment and `QuoteRecorded` transaction are recorded privately.
 - Wallet-free browser preview, receipt-link recovery, and visible stale/changed-round/altered-receipt exercises are recorded privately.
-- Read-only local-versus-stored comparison now demonstrates genuine `match`, simple-tamper `invalid/not_run`, recomputed-forgery `valid/mismatch`, missing-record `not_found`, wrong-context rejection, and provider failure without another write.
-- Public local clean-room install/build/boot passes at `0dbe33a`; candidate `1432c82` additionally passes 31 Hardhat tests, zero-warning Hardhat/frontend lint, type-check, production build, route-guard regressions, true 375/320px DOM checks, and the local endpoint adversarial checks in this checkout.
+- Read-only comparison now demonstrates genuine local/historical-oracle/stored `valid/match/match`, simple-tamper `invalid/not_checked/not_run`, recomputed amount forgery `valid/match/mismatch`, false-price forgery with historical/stored mismatches, missing-record `not_found`, wrong-context rejection, wrong-network guarding, and provider failure without another write.
+- Public local clean-room install/build/boot passes at `0dbe33a`; the current working candidate additionally passes 36 Hardhat tests, zero-warning Hardhat/frontend lint, type-check, production build, route-guard regressions, true 375/320px mobile DOM checks, the narrow-layout fix, and the local endpoint adversarial checks in this checkout.
 - The public CI workflow is deterministic (`npm ci`, compile, tests, types, lint, build) and does not deploy contracts or require wallet/private secrets. `AGENTS.md` and `DEMO-SCRIPT.md` describe the actual QuoteProof paths and the API-only forged-copy demonstration.
 - The manifest is local and validated against the current official CLI schema; the remote command remains unrun because the repository is not published.
 
