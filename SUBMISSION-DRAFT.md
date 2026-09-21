@@ -39,5 +39,6 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Remote repository publication and external CLI scaffold run.
 - Run the literal remote scaffold test after publication; the local-source D6 substitution does not satisfy that separate mandatory gate.
+- Packet review follow-ups remain open: `packages/hardhat/scripts/verifyQuote.ts` currently reserves exit code `2` for local invalidity, expected-reference mismatch/not-checked, wrong network, and provider errors, but does not make stored-record `mismatch`/`not_found` or historical-oracle `mismatch`/`unavailable` non-zero. Also, root verifier examples that omit `--expected-registry` and `--expected-oracle` depend on the ignored, locally generated `packages/hardhat/deployments/` artifact; a fresh clean source export has no such artifact and reports that prerequisite error. These are visible review issues, not resolved by the genuine happy-path result.
 - The mocked wallet guard matrix is complete; real wallet rejection, wrong-network, pending, and duplicate-click interaction remains intentionally unclaimed because no live signing or additional wallet harness was authorized.
 - Official organizer terms and final submission authorization.
