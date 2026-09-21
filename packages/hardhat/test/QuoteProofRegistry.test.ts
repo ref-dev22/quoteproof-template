@@ -109,4 +109,55 @@ describe("QuoteProofRegistry", function () {
     await mock.setRevertLatest(true);
     await expect(registry.previewQuote(100)).to.be.revertedWithCustomError(registry, "OracleReadFailed");
   });
+
+  it("covers exact age, scale extremes, monotonicity and rounding bounds", async function () {
+    const { mock, registry } = await deployFixture();
+    const latestBlock = await ethers.provider.getBlock("latest");
+    const nextPreviewTimestamp = BigInt(latestBlock?.timestamp ?? Math.floor(Date.now() / 1000)) + 2n;
+    await mock.setRoundData(9, PRICE_10_CENTS, nextPreviewTimestamp - MAX_AGE, nextPreviewTimestamp - MAX_AGE);
+    await ethers.provider.send("evm_setNextBlockTimestamp", [Number(nextPreviewTimestamp)]);
+    const exactBoundary = await registry.previewQuote(1);
+    expect(exactBoundary.tinybars).to.be.greaterThan(0n);
+
+    await mock.setRoundData(10, 1, nextPreviewTimestamp - 1n, nextPreviewTimestamp - 1n);
+    const lowPrice = await registry.previewQuote(1);
+    expect(lowPrice.tinybars).to.equal(100_000_000_000_000n);
+    await mock.setRoundData(11, 100_000_000_000_000_000n, nextPreviewTimestamp - 1n, nextPreviewTimestamp - 1n);
+    const highPrice = await registry.previewQuote(1);
+    expect(highPrice.tinybars).to.equal(1n);
+
+    await mock.setRoundData(12, PRICE_10_CENTS, nextPreviewTimestamp - 1n, nextPreviewTimestamp - 1n);
+    const minimum = await registry.previewQuote(1);
+    const maximum = await registry.previewQuote(100_000_000);
+    expect(maximum.tinybars).to.be.greaterThan(minimum.tinybars);
+    const numerator = 100_000_000n * 10n ** 14n;
+    expect(maximum.tinybars * PRICE_10_CENTS).to.be.greaterThanOrEqual(numerator);
+    expect((maximum.tinybars - 1n) * PRICE_10_CENTS).to.be.lessThan(numerator);
+
+    await mock.setRoundData(13, 20_000_000, nextPreviewTimestamp - 1n, nextPreviewTimestamp - 1n);
+    const doubledPrice = await registry.previewQuote(100);
+    await mock.setRoundData(14, PRICE_10_CENTS, nextPreviewTimestamp - 1n, nextPreviewTimestamp - 1n);
+    const basePrice = await registry.previewQuote(100);
+    expect(doubledPrice.tinybars).to.be.lessThan(basePrice.tinybars);
+  });
+
+  it("gives the same quote across decimal scales", async function () {
+    const Mock = await ethers.getContractFactory("MockQuoteProofAggregator");
+    const zeroDecimalMock = await Mock.deploy(0, "HBAR / USD");
+    await zeroDecimalMock.waitForDeployment();
+    const eighteenDecimalMock = await Mock.deploy(18, "HBAR / USD");
+    await eighteenDecimalMock.waitForDeployment();
+    const latestBlock = await ethers.provider.getBlock("latest");
+    const current = BigInt(latestBlock?.timestamp ?? Math.floor(Date.now() / 1000));
+    await zeroDecimalMock.setRoundData(1, 1, current - 1n, current - 1n);
+    await eighteenDecimalMock.setRoundData(1, 1_000_000_000_000_000_000n, current - 1n, current - 1n);
+    const Registry = await ethers.getContractFactory("QuoteProofRegistry");
+    const zeroRegistry = await Registry.deploy(zeroDecimalMock.target, 0, MAX_AGE);
+    const eighteenRegistry = await Registry.deploy(eighteenDecimalMock.target, 18, MAX_AGE);
+    await zeroRegistry.waitForDeployment();
+    await eighteenRegistry.waitForDeployment();
+    const zeroScaleQuote = await zeroRegistry.previewQuote(100);
+    const eighteenScaleQuote = await eighteenRegistry.previewQuote(100);
+    expect(zeroScaleQuote.tinybars).to.equal(eighteenScaleQuote.tinybars);
+  });
 });
