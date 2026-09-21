@@ -6,7 +6,7 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Repository: `https://github.com/ref-dev22/quoteproof-template`
 - Default branch: `main`
-- Candidate revision: `62ab79c`
+- Candidate revision: `1432c82`
 - External scaffold command after publication:
 
   ```bash
@@ -29,12 +29,13 @@ This is a preparation artifact only. It does not publish the repository or submi
 - Genuine Hedera Testnet deployment and `QuoteRecorded` transaction are recorded privately.
 - Wallet-free browser preview, receipt-link recovery, and visible stale/changed-round/altered-receipt exercises are recorded privately.
 - Read-only local-versus-stored comparison now demonstrates genuine `match`, simple-tamper `invalid/not_run`, recomputed-forgery `valid/mismatch`, missing-record `not_found`, wrong-context rejection, and provider failure without another write.
-- Public local clean-room install/build/boot passes at `0dbe33a`; the bounded comparison candidate `62ab79c` additionally passes focused tests, lint, type-check, production build, and local endpoint adversarial checks in this checkout.
+- Public local clean-room install/build/boot passes at `0dbe33a`; candidate `1432c82` additionally passes 31 Hardhat tests, zero-warning Hardhat/frontend lint, type-check, production build, route-guard regressions, true 375/320px DOM checks, and the local endpoint adversarial checks in this checkout.
+- The public CI workflow is deterministic (`npm ci`, compile, tests, types, lint, build) and does not deploy contracts or require wallet/private secrets. `AGENTS.md` and `DEMO-SCRIPT.md` describe the actual QuoteProof paths and the API-only forged-copy demonstration.
 - The manifest is local and validated against the current official CLI schema; the remote command remains unrun because the repository is not published.
 
 ## Honest remaining gates
 
 - Remote repository publication and external CLI scaffold run.
 - Full independent README run (the newcomer review was read-only and did not satisfy D6).
-- Owner-authorized wallet rejection/wrong-network/pending/duplicate-click coverage if a safe mocked/browser harness is available; no additional live write is required.
+- The mocked wallet guard matrix is complete; real wallet rejection, wrong-network, pending, and duplicate-click interaction remains intentionally unclaimed because no live signing or additional wallet harness was authorized.
 - Official organizer terms and final submission authorization.
