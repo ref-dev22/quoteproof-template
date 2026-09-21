@@ -6,7 +6,7 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Repository: `https://github.com/ref-dev22/quoteproof-template`
 - Default branch: `main`
-- Candidate revision: `f8e5c5b`
+- Candidate revision: `62ab79c`
 - External scaffold command after publication:
 
   ```bash
@@ -28,7 +28,8 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Genuine Hedera Testnet deployment and `QuoteRecorded` transaction are recorded privately.
 - Wallet-free browser preview, receipt-link recovery, and visible stale/changed-round/altered-receipt exercises are recorded privately.
-- Public local clean-room install/build/boot passes at `f8e5c5b`.
+- Read-only local-versus-stored comparison now demonstrates genuine `match`, simple-tamper `invalid/not_run`, recomputed-forgery `valid/mismatch`, missing-record `not_found`, wrong-context rejection, and provider failure without another write.
+- Public local clean-room install/build/boot passes at `0dbe33a`; the bounded comparison candidate `62ab79c` additionally passes focused tests, lint, type-check, production build, and local endpoint adversarial checks in this checkout.
 - The manifest is local and validated against the current official CLI schema; the remote command remains unrun because the repository is not published.
 
 ## Honest remaining gates
