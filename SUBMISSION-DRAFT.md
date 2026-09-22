@@ -17,6 +17,13 @@ npm ci
 
 The explicit skip-install path separates remote template generation from the lockfile install. CLI 0.4.0 successfully generated the public template from an empty directory. It intentionally removes `template.json` from the generated project; the source repository retains the manifest.
 
+## Provenance of the evidence
+
+- Runtime implementation: deployed revision `62b45781266b6e93e95256ddf6e0d91d420894b0`.
+- Previous documentation revision: `7c045622e152611ecff5890a5b19ae3f99dd166a`; its regular checks are represented by the [lint/CI workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml) and recorded run `35724140563`.
+- Last full external-scaffold gate: source revision `28e48d4`, recorded in the [external-scaffold workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml) run `35720125222`.
+- The current documentation and demo candidate awaits its own CI result and Vercel redeploy; those historical workflow links do not claim validation of this candidate.
+
 ## Organizer form status
 
 The draft is not submitted. The current form requires a public video URL under five minutes, a project description of no more than three sentences, a mainnet payout account ID, and five developer-experience ratings. The video URL remains pending final review and the public asset redeploy; the mainnet payout ID and ratings remain owner-private fields.
@@ -29,10 +36,10 @@ Proposed three-sentence project description:
 
 - [x] Public repository published with owner authorization.
 - [x] External CLI scaffold from the public repository completed successfully using the scaffold command above.
-- [x] Linux CI on Node 20.18.3 passed clean install, contract compile, all 34 tests, both TypeScript checks, both zero-warning lint checks and the production build. [Implementation CI run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720124038) for public commit `28e48d4`.
+- [x] Historical Linux CI evidence on Node 20.18.3 covered clean install, contract compile, all 34 tests, both TypeScript checks, both zero-warning lint checks and the production build; the workflow is [`lint.yaml`](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml).
 - [x] Genuine Hedera Testnet deployment and successful `QuoteRecorded` transaction, independently rechecked through Mirror Node on 22 September 2026.
 - [x] Contract, receipt, historical-oracle comparison, stored-commitment comparison and route-guard tests. Default tests use local mocks and do not deploy or require credentials.
-- [x] Complete external-scaffold release gate on Node 20.18.3/Linux: public CLI download at the pinned revision, source checks, clean install, all 34 tests, types, lint, production build and production startup. The generated app also passed the optional local/mock policy workshop: an incomplete `3,600`-second policy was rejected by the unchanged verifier, followed by the coordinated four-file patch and full mock suite. [Passing release run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720125222). [Regular CI on the same public commit](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720124038).
+- [x] Historical external-scaffold release evidence on Node 20.18.3/Linux covered public CLI download at the pinned revision, source checks, clean install, all 34 tests, types, lint, production build and production startup. The generated app also passed the optional local/mock policy workshop: an incomplete `3,600`-second policy was rejected by the unchanged verifier, followed by the coordinated four-file patch and full mock suite. See the [external-scaffold workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml), recorded run `35720125222`, and the [regular CI workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml).
 - [x] Six read-only runtime checks passed on the generated app: homepage 200; live preview 200 with six string fields; invalid zero and oversized amounts 400; genuine receipt `valid/match/match`; altered receipt `invalid/not_checked/not_run`.
 - [x] Generated README commands were checked after CLI transformation; the manifest's optional deployment instruction forwards its arguments correctly.
 - [x] Sanitized four-case standalone evidence packet is published with inspectable fixtures, result matrix and a readable report; the genuine export semantically matches the public historical fixture.

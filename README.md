@@ -4,7 +4,7 @@ QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quot
 
 The current public checkout is a reviewable local release candidate built on Scaffold-HBAR. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience.
 
-The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720125222) downloads the public template, installs it, runs 34 tests, builds and starts it, checks live preview and genuine/altered receipt comparisons, and exercises the optional mock-only policy workshop. This run covers public commit `28e48d4`; later documentation and demo assets are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
+The historical [external-scaffold release workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml) recorded run `35720125222` on public commit `28e48d4`: it downloaded the public template, installed it, ran 34 tests, built and started it, checked live preview and genuine/altered receipt comparisons, and exercised the optional mock-only policy workshop. Later documentation and demo assets are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
 
 ## Try the experience
 
@@ -112,6 +112,8 @@ npm run quote:e2e -w @sh/hardhat -- --network hederaTestnet --cents 100 --output
 npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a
 ```
 
+Both workspace commands run with `packages/hardhat` as their working directory, so the explicit output is `packages/hardhat/quoteproof-receipt.json` and the verifier consumes that same file. Keep this credentialed flow local.
+
 Never put a private key, encrypted keystore, or funded-account material in the repository or browser environment. Testnet credentials stay local and ignored.
 
 ## How QuoteProof works
@@ -156,13 +158,15 @@ Hedera's [EVM/Hardhat documentation](https://docs.hedera.com/hedera/tutorials/sm
 The direct Hardhat verifier can perform the same wallet-free checks without a hosted API or Next.js server. The read-only example supplies the chain, registry, and oracle explicitly so it also works from a fresh source export, where ignored deployment artifacts are absent:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
+npm run verify:quote -w @sh/hardhat -- --input ../../examples/receipt-testnet.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
 ```
+
+The workspace command resolves this committed fixture from `packages/hardhat`; for a downloaded receipt, pass its absolute path or a path relative to that workspace working directory.
 
 The output keeps `localConsistency` calculation/commitment verification, `historicalOracle` exact-round verification, and `recordedComparison` stored state separate. To check evidence for a quote selected outside the receipt, supply all three expected fields independently:
 
 ```bash
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --allow-foreign-context --expected-commitment 0x<independent-commitment> --expected-issuer 0x<expected-issuer> --expected-nonce 0
+npm run verify:quote -w @sh/hardhat -- --input ../../examples/receipt-testnet.json --allow-foreign-context --expected-commitment 0x<independent-commitment> --expected-issuer 0x<expected-issuer> --expected-nonce 0
 ```
 
 Without those independent fields, `expectedQuote.status` is `not_supplied`; malformed or incomplete fields are `not_checked`. `--allow-foreign-context` makes this second command intentionally offline; it does not prove recorded state. A genuine different quote can pass its own local and stored checks but fail `expectedQuote`, which is the intended distinction between quote authenticity and evidence for a particular expected quote.
