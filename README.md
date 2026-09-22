@@ -4,6 +4,8 @@ QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quot
 
 The current public checkout is a reviewable local release candidate built on Scaffold-HBAR. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience.
 
+The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35700331631) downloads the public template, installs it, runs 34 tests, builds and starts it, then checks live preview and genuine/altered receipt comparisons. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification. The run's logs identify the exact tested commit.
+
 ## Try the experience
 
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
