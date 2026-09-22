@@ -45,7 +45,7 @@
             },
             {
               "label": "Deploy after reviewing the README",
-              "command": "{run:framework:deploy} --network hederaTestnet --tags QuoteProof"
+              "command": "{run:framework:deploy} -- --network hederaTestnet --tags QuoteProof"
             }
           ]
         }
