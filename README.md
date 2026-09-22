@@ -4,7 +4,7 @@ QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quot
 
 The current public checkout is a reviewable local release candidate built on Scaffold-HBAR. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience.
 
-The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35700331631) downloads the public template, installs it, runs 34 tests, builds and starts it, then checks live preview and genuine/altered receipt comparisons. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification. The run's logs identify the exact tested commit.
+The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35714035181) downloads the public template, installs it, runs 34 tests, builds and starts it, then checks live preview and genuine/altered receipt comparisons. The run validates the implementation revision recorded in [`SUBMISSION-DRAFT.md`](SUBMISSION-DRAFT.md); later documentation-only updates are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
 
 ## Try the experience
 
@@ -19,7 +19,7 @@ npm run next:dev -- --hostname 0.0.0.0 --port 3001
 
 Open `http://localhost:3001`. The page shows the testnet chain, source, USD per HBAR, observation age, ceiling-to-tinybar quantity, round, feed ID, oracle, and recovery actions. Recording is a separate wallet-gated step. Do not click the write action unless you intend to submit a testnet transaction. Use another explicit port, such as `3002`, for an isolated clean-copy review when port `3001` is already reserved.
 
-The page being reachable is not proof that the live reference read succeeded. Confirm the preview card has a price, round, observation age, and quantity; the card must not say `Reference unavailable`.
+The page being reachable is not proof that the live reference read succeeded. Confirm the preview card has a price, round, observation age, and quantity; the card must not say `Reference unavailable`. This browser preview reads the configured testnet RPC, so it is wallet-free but not a deterministic offline test.
 
 The deployed testnet context used by this release candidate is:
 
@@ -89,11 +89,19 @@ npm run next:check-types
 npm run next:lint
 npm run next:build
 
-# local fork workflow, in separate terminals
+# optional forked read environment for an explicit experiment; this is not a complete local app mode
 npm run hardhat:chain
-npm run hardhat:deploy -- --network localhost
-npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
+
+This checkout does not provide a supported local deployment-and-retarget workflow. Keep the forked node separate from the wallet-free preview and use the mock-only workshop below for deterministic adaptation.
+
+For a deterministic local adaptation, use the mock-only policy workshop. It exercises the existing contract mock, standalone verifier, and mocked comparison route without a fork, wallet, RPC, live deployment, or live write:
+
+```bash
+node scripts/check-local-policy-workshop.mjs
+```
+
+See [`docs/local-policy-workshop.md`](docs/local-policy-workshop.md) for the disposable `3,600`-second example and its explicit production boundary.
 
 Testnet deployment and receipt creation require a Hedera-created ECDSA account and local credentials. Preview and the deterministic contract tests do not.
 
@@ -217,6 +225,7 @@ All are optional for the wallet-free preview unless noted.
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored, historical-oracle, and expected-quote comparison helpers
 - `DEMO-SCRIPT.md` — reproducible 90-second read-only demo, including direct CLI and API-only forged-copy cases
 - `docs/hosting.md` — Vercel monorepo settings and read-only hosted verification
+- `docs/local-policy-workshop.md` — disposable mock-only policy adaptation and validation
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
 - `SUBMISSION-DRAFT.md` — publication target, exact external scaffold command, and release checklist

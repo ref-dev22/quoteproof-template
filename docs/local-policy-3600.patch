@@ -1,0 +1,52 @@
+diff --git a/packages/hardhat/test/QuoteProofRegistry.test.ts b/packages/hardhat/test/QuoteProofRegistry.test.ts
+index c220b61..926d013 100644
+--- a/packages/hardhat/test/QuoteProofRegistry.test.ts
++++ b/packages/hardhat/test/QuoteProofRegistry.test.ts
+@@ -10,7 +10,7 @@ import {
+   type QuoteReceiptJson,
+ } from "../utils/quoteReceipt";
+ 
+-const MAX_AGE = 93_600n;
++const MAX_AGE = 3_600n;
+ const DECIMALS = 8;
+ const PRICE_10_CENTS = 10_000_000n;
+ const PRICE_3_CENTS = 3_000_000n;
+diff --git a/packages/hardhat/test/quoteCompareRoute.test.ts b/packages/hardhat/test/quoteCompareRoute.test.ts
+index 9bfbc6b..4c10267 100644
+--- a/packages/hardhat/test/quoteCompareRoute.test.ts
++++ b/packages/hardhat/test/quoteCompareRoute.test.ts
+@@ -21,7 +21,7 @@ function makeReceipt(): QuoteReceiptJson {
+     decimals: "8",
+     observedAt: "1000",
+     recordedAt: "1001",
+-    maximumAge: "93600",
++    maximumAge: "3600",
+     tinybars: "1000000000",
+     commitment: `0x${"0".repeat(64)}`,
+   };
+diff --git a/packages/hardhat/test/quoteReceipt.test.ts b/packages/hardhat/test/quoteReceipt.test.ts
+index f03793d..5f76a0e 100644
+--- a/packages/hardhat/test/quoteReceipt.test.ts
++++ b/packages/hardhat/test/quoteReceipt.test.ts
+@@ -24,7 +24,7 @@ function makeReceipt(overrides: Partial<QuoteReceiptJson> = {}): QuoteReceiptJso
+     decimals: "8",
+     observedAt: "1000000",
+     recordedAt: "1000100",
+-    maximumAge: "93600",
++    maximumAge: "3600",
+     tinybars: "1000000000",
+     commitment: "0x0000000000000000000000000000000000000000000000000000000000000000",
+   };
+diff --git a/packages/hardhat/utils/quoteReceipt.ts b/packages/hardhat/utils/quoteReceipt.ts
+index 3613e89..8d4e74a 100644
+--- a/packages/hardhat/utils/quoteReceipt.ts
++++ b/packages/hardhat/utils/quoteReceipt.ts
+@@ -5,7 +5,7 @@ export const SCHEMA_VERSION = 1n;
+ export const MIN_CENTS = 1n;
+ export const MAX_CENTS = 100_000_000n;
+ export const MAX_ORACLE_DECIMALS = 18;
+-export const REFERENCE_MAX_AGE = 93_600n;
++export const REFERENCE_MAX_AGE = 3_600n;
+ export const FEED_ID = keccak256(toUtf8Bytes("HBAR/USD"));
+ 
+ const UINT8_MAX = 2n ** 8n - 1n;

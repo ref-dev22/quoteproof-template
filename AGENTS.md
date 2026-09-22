@@ -47,3 +47,5 @@ The trusted release context is Hedera Testnet chain `296`, registry `0xa1a741aF6
 Use the existing Wagmi/Scaffold-HBAR hooks (`useScaffoldReadContract`, `useScaffoldWriteContract`, `useTransactor`) and DaisyUI classes. Keep the write path guarded by a valid preview, connected account, Hedera Testnet, current nonce/round, and single pending transaction. Rejection, wrong-network, pending, duplicate-click, stale, changed-round, and unavailable-feed paths must never trigger an automatic retry or a second live write; use deterministic mocks/fixtures for additional coverage.
 
 Keep public CI deterministic: `npm ci`, compile, Hardhat tests/types/lint, frontend types/lint, and production build. Do not add a deploy, fork, wallet unlock, secret, or paid provider to CI. The repo currently contains Hardhat only; do not invent Foundry commands.
+
+For the disposable mock-only freshness-policy adaptation, follow [`docs/local-policy-workshop.md`](docs/local-policy-workshop.md). It must not change the live deployment, historical receipt, receipt schema, or guarded wallet-write path.

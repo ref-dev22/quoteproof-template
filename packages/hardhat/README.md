@@ -18,13 +18,13 @@ Tests run on the local Hardhat network with forking and gas reporting disabled. 
 The testnet-only QuoteProof path deploys the registry and creates one receipt with a single local password unlock:
 
 ```bash
-npm run quote:e2e -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
+npm run quote:e2e -w @sh/hardhat -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
 ```
 
 The creator rebuilds the receipt from the confirmed `QuoteRecorded` event and refuses to write it unless the event, stored commitment and standalone verifier agree. Verify a receipt with the deployed context bound explicitly:
 
 ```bash
-npm run verify:quote -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
 ```
 
 Without `--allow-foreign-context`, the verifier defaults to Hedera testnet chain `296`; it may load `deployments/hederaTestnet/QuoteProofRegistry.json` when that ignored local artifact exists, but fresh source exports must use the explicit registry/oracle flags shown above. `--allow-foreign-context` is only for deliberate offline fixtures. The result always reports `onChainVerified: false`; `--compare-stored` adds direct read-only registry and historical-oracle calls without the Next.js server. The optional `--expected-commitment`, `--expected-issuer`, and `--expected-nonce` fields must come from an independent reference and report `not_supplied`, `not_checked`, `match`, or `mismatch`.

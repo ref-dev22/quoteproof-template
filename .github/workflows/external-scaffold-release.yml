@@ -111,6 +111,9 @@ jobs:
             packages/nextjs/app/api/quote/preview/route.ts \
             packages/nextjs/app/api/quote/compare/route.ts \
             examples/receipt-testnet.json \
+            docs/local-policy-workshop.md \
+            docs/local-policy-3600.patch \
+            scripts/check-local-policy-workshop.mjs \
             scripts/release-smoke.mjs; do
             cmp -- "$GITHUB_WORKSPACE/$path" "$app/$path"
           done
@@ -139,6 +142,13 @@ jobs:
             npm run next:lint -- --max-warnings=0
             npm run next:build
           } 2>&1 | tee "$RELEASE_LOG_DIR/deterministic-checks.log"
+
+      - name: Exercise local mock policy workshop on generated scaffold
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}/app
+        run: |
+          set -euo pipefail
+          node scripts/check-local-policy-workshop.mjs 2>&1 | tee "$RELEASE_LOG_DIR/local-policy-workshop.log"
 
       - name: Run bounded read-only production API smoke checks
         shell: bash
