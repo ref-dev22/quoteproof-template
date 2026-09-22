@@ -1,0 +1,193 @@
+name: External scaffold release gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      implementation_ref:
+        description: Public implementation branch, tag, or commit to scaffold and verify
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  external-scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TEMPLATE_REPOSITORY: ${{ github.repository }}
+      IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
+      RELEASE_ROOT: ${{ runner.temp }}/quoteproof-external-scaffold
+      RELEASE_LOG_DIR: ${{ runner.temp }}/quoteproof-external-scaffold/logs
+
+    steps:
+      - name: Checkout pinned public implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.implementation_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js 20.18.3
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+
+      - name: Prepare empty external scaffold directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$IMPLEMENTATION_REF" in
+            (''|*[!A-Za-z0-9._/-]*)
+              printf 'implementation_ref contains unsupported characters\n' >&2
+              exit 1
+              ;;
+          esac
+          case "$TEMPLATE_REPOSITORY" in
+            (*'/'*'/'*|''|*[!A-Za-z0-9._/-]*)
+              printf 'github.repository is not a public owner/repository identifier\n' >&2
+              exit 1
+              ;;
+          esac
+          mkdir -p "$RELEASE_ROOT"
+          test -z "$(find "$RELEASE_ROOT" -mindepth 1 -maxdepth 1 -print -quit)"
+          mkdir -p "$RELEASE_LOG_DIR"
+          {
+            printf 'repository=%s\n' "$TEMPLATE_REPOSITORY"
+            printf 'requested_ref=%s\n' "$IMPLEMENTATION_REF"
+            printf 'checked_out_commit='
+            git rev-parse HEAD
+          } | tee "$RELEASE_LOG_DIR/source-ref.log"
+
+      - name: Scaffold from public repository with CLI 0.4.0
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}
+        run: |
+          set -euo pipefail
+          npx --yes create-scaffold-hbar@0.4.0 app \
+            --template "$TEMPLATE_REPOSITORY#$IMPLEMENTATION_REF" \
+            --frontend nextjs-app \
+            --solidity-framework hardhat \
+            --network testnet \
+            --package-manager "npm" \
+            --ci \
+            --skip-hedera-skills \
+            --skip-install 2>&1 | tee "$RELEASE_LOG_DIR/cli-output.log"
+
+      - name: Verify generated source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$RELEASE_ROOT/app"
+          node - "$GITHUB_WORKSPACE/package.json" "$app/package.json" <<'NODE'
+          const fs = require("node:fs");
+          const normalize = value => {
+            if (Array.isArray(value)) return value.map(normalize);
+            if (value && typeof value === "object") {
+              return Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize(value[key])]));
+            }
+            return value;
+          };
+          const [sourcePath, generatedPath] = process.argv.slice(1);
+          const source = normalize(JSON.parse(fs.readFileSync(sourcePath, "utf8")));
+          const generated = normalize(JSON.parse(fs.readFileSync(generatedPath, "utf8")));
+          if (JSON.stringify(source) !== JSON.stringify(generated)) {
+            console.error("generated package.json differs from the checked-out package.json");
+            process.exit(1);
+          }
+          NODE
+          for path in \
+            AGENTS.md \
+            package-lock.json \
+            packages/hardhat/contracts/QuoteProofRegistry.sol \
+            packages/hardhat/utils/quoteReceipt.ts \
+            packages/hardhat/utils/quoteReceiptComparison.ts \
+            packages/nextjs/app/api/quote/preview/route.ts \
+            packages/nextjs/app/api/quote/compare/route.ts \
+            examples/receipt-testnet.json \
+            scripts/release-smoke.mjs; do
+            cmp -- "$GITHUB_WORKSPACE/$path" "$app/$path"
+          done
+          test ! -e "$app/template.json"
+          printf 'Generated implementation matches the checked-out public commit for release-critical files; template.json removal is the expected CLI transform.\n' \
+            | tee "$RELEASE_LOG_DIR/provenance.log"
+
+      - name: Install generated scaffold dependencies
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}/app
+        run: |
+          set -euo pipefail
+          npm ci 2>&1 | tee "$RELEASE_LOG_DIR/npm-ci.log"
+
+      - name: Compile, test, type-check, lint, and build generated scaffold
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}/app
+        run: |
+          set -euo pipefail
+          {
+            npm run hardhat:compile
+            npm run hardhat:test
+            npm run hardhat:check-types
+            npm run hardhat:lint -- --max-warnings=0
+            npm run next:check-types
+            npm run next:lint -- --max-warnings=0
+            npm run next:build
+          } 2>&1 | tee "$RELEASE_LOG_DIR/deterministic-checks.log"
+
+      - name: Run bounded read-only production API smoke checks
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}/app
+        env:
+          RELEASE_SMOKE_BASE_URL: http://127.0.0.1:3002
+        run: |
+          set -euo pipefail
+          server_log="$RELEASE_LOG_DIR/production-server.log"
+          npm run next:serve -- --hostname 127.0.0.1 --port 3002 > "$server_log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if kill -0 "$server_pid" 2>/dev/null; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          ready=0
+          deadline=$((SECONDS + 60))
+          while (( SECONDS < deadline )); do
+            if curl --fail --silent --show-error --max-time 1 "$RELEASE_SMOKE_BASE_URL/" > /dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              tail -n 80 "$server_log" >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            tail -n 80 "$server_log" >&2 || true
+            printf 'production server did not become ready within 60 seconds\n' >&2
+            exit 1
+          fi
+          node "$GITHUB_WORKSPACE/scripts/release-smoke.mjs" 2>&1 | tee "$RELEASE_LOG_DIR/smoke.log"
+
+      - name: Upload selected public release logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-scaffold-release-logs
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/cli-output.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/source-ref.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/provenance.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/npm-ci.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/deterministic-checks.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/production-server.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/smoke.log
