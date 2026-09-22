@@ -40,6 +40,9 @@ jobs:
           RELEASE_ROOT="$RUNNER_TEMP/quoteproof-external-scaffold"
           RELEASE_LOG_DIR="$RELEASE_ROOT/logs"
           printf 'RELEASE_ROOT=%s\nRELEASE_LOG_DIR=%s\n' "$RELEASE_ROOT" "$RELEASE_LOG_DIR" >> "$GITHUB_ENV"
+          # The upstream CLI creates an initial local commit in the generated app.
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           case "$IMPLEMENTATION_REF" in
             (''|*[!A-Za-z0-9._/-]*)
               printf 'implementation_ref contains unsupported characters\n' >&2
