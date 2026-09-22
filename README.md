@@ -214,6 +214,7 @@ All are optional for the wallet-free preview unless noted.
 - `packages/nextjs/app/api/quote/compare/route.ts` — read-only local, historical-oracle, and stored-receipt comparison
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored, historical-oracle, and expected-quote comparison helpers
 - `DEMO-SCRIPT.md` — reproducible 90-second read-only demo, including direct CLI and API-only forged-copy cases
+- `docs/hosting.md` — Vercel monorepo settings and read-only hosted verification
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
 - `SUBMISSION-DRAFT.md` — publication target, exact external scaffold command, and release checklist
