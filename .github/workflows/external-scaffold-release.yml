@@ -19,8 +19,6 @@ jobs:
     env:
       TEMPLATE_REPOSITORY: ${{ github.repository }}
       IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
-      RELEASE_ROOT: ${{ runner.temp }}/quoteproof-external-scaffold
-      RELEASE_LOG_DIR: ${{ runner.temp }}/quoteproof-external-scaffold/logs
 
     steps:
       - name: Checkout pinned public implementation
@@ -39,6 +37,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          RELEASE_ROOT="$RUNNER_TEMP/quoteproof-external-scaffold"
+          RELEASE_LOG_DIR="$RELEASE_ROOT/logs"
+          printf 'RELEASE_ROOT=%s\nRELEASE_LOG_DIR=%s\n' "$RELEASE_ROOT" "$RELEASE_LOG_DIR" >> "$GITHUB_ENV"
           case "$IMPLEMENTATION_REF" in
             (''|*[!A-Za-z0-9._/-]*)
               printf 'implementation_ref contains unsupported characters\n' >&2
