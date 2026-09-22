@@ -4,11 +4,11 @@ QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quot
 
 The current public checkout is a reviewable local release candidate built on Scaffold-HBAR. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience.
 
-The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35714035181) downloads the public template, installs it, runs 34 tests, builds and starts it, then checks live preview and genuine/altered receipt comparisons. The run validates the implementation revision recorded in [`SUBMISSION-DRAFT.md`](SUBMISSION-DRAFT.md); later documentation-only updates are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
+The [passing external-scaffold release check](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720125222) downloads the public template, installs it, runs 34 tests, builds and starts it, checks live preview and genuine/altered receipt comparisons, and exercises the optional mock-only policy workshop. This run covers public commit `28e48d4`; later documentation and demo assets are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
 
 ## Try the experience
 
-Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no wallet connection or new transaction. For your own deployment, see [hosting instructions](docs/hosting.md).
+Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The prepared 118.320-second recorded walkthrough will be available at [`/demo/index.html`](https://quoteproof.vercel.app/demo/index.html) after the public asset redeploy. For your own deployment, see [hosting instructions](docs/hosting.md).
 
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
 
@@ -223,7 +223,9 @@ All are optional for the wallet-free preview unless noted.
 - `packages/nextjs/app/api/quote/preview/route.ts` — wallet-free live preview read
 - `packages/nextjs/app/api/quote/compare/route.ts` — read-only local, historical-oracle, and stored-receipt comparison
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored, historical-oracle, and expected-quote comparison helpers
-- `DEMO-SCRIPT.md` — reproducible 90-second read-only demo, including direct CLI and API-only forged-copy cases
+- `DEMO-SCRIPT.md` — reproducible 118-second recorded demo stages and separate CLI/adversarial checks
+- `docs/adversarial-evidence.md` — sanitized four-case receipt fixtures, results and portable read-only verifier command
+- `packages/nextjs/public/demo/index.html` — static recorded-demo viewer (when the recording artifact is present)
 - `docs/hosting.md` — Vercel monorepo settings and read-only hosted verification
 - `docs/local-policy-workshop.md` — disposable mock-only policy adaptation and validation
 - `LICENCE` — MIT license and upstream notice

@@ -1,0 +1,13 @@
+{
+  "diagnostic": "HED-final-demo-20260922",
+  "executedAt": "2026-09-22T12:13:58.920Z",
+  "sourceCommit": "7c045622e152611ecff5890a5b19ae3f99dd166a",
+  "publicFixtureSemanticMatch": true,
+  "overallStatus": "passed",
+  "cases": [
+    {"id":"genuine","fixture":"examples/adversarial/genuine.json","changes":"actual exported receipt","exitCode":0,"local":"valid","historical":"match","recorded":"match"},
+    {"id":"simple-tamper-tinybars-plus-one","fixture":"examples/adversarial/simple-tamper-tinybars-plus-one.json","changes":"tinybars + 1; commitment unchanged","exitCode":2,"local":"invalid","historical":"not_checked","recorded":"not_run"},
+    {"id":"recomputed-cents-1000","fixture":"examples/adversarial/recomputed-cents-1000.json","changes":"cents 100 → 1000; tinybars and commitment recomputed","exitCode":2,"local":"valid","historical":"match","recorded":"mismatch"},
+    {"id":"recomputed-double-price","fixture":"examples/adversarial/recomputed-double-price.json","changes":"price doubled; tinybars and commitment recomputed","exitCode":2,"local":"valid","historical":"mismatch","recorded":"mismatch"}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1",
+  "chainId": "296",
+  "registry": "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709",
+  "issuer": "0x3E5aB4bAEdF52EbD989c2A5Df973dc8281b4bE4F",
+  "nonce": "0",
+  "cents": "100",
+  "oracle": "0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a",
+  "feedId": "0x2c03d7a88d6c4e746533bd35d9f7ce1aa75edffbd08c0dbec4e217d008cfa908",
+  "roundId": "18446744073709595411",
+  "price": "17647224",
+  "decimals": "8",
+  "observedAt": "1789981246",
+  "recordedAt": "1789981713",
+  "maximumAge": "93600",
+  "tinybars": "566661363",
+  "commitment": "0xe1486b76d536b8a0d640f163502b95701c022b6d2362f5944a3dd48d6c069c0a"
+}

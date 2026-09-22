@@ -1,20 +1,34 @@
-# QuoteProof 90-second demo
+# QuoteProof 118-second recorded demo
 
-This is a read-only walkthrough. It does not connect a wallet, unlock an account, sign, or submit a transaction.
+The prepared recording is a silent, captioned browser-page capture. It shows the public app and a clearly labeled recorded CLI evidence report. No wallet action, signing, or new transaction occurs; the Scaffold preview may initialize its known burner automatically, so the claim is about actions taken in the demo.
 
-1. **0–10s — Open the experience.** Start the app with `npm run next:dev -- --hostname 0.0.0.0 --port 3001`, then open the historical share route:
-   `http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
+## What the recording shows
 
-2. **10–25s — Show provenance and calculation.** Point to the wallet-free preview: Hedera Testnet chain `296`, Chainlink HBAR/USD, price, observation age, round, ceiling-to-tinybar quantity, feed ID and oracle. Say: “This is a reference quote, not a payment, and preview does not write.”
+1. **0–13s — Open the public experience.** The historical share route is opened for the existing testnet receipt:
+   `https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
 
-3. **25–40s — Show portable proof.** Point to `Confirmed on Hedera testnet`, the event-bound reference/quantity/round/commitment, and the HashScan/Mirror links. Click `Compare stored commitment`. The three visible results should be `Locally consistent`, `Historical observation matches`, and `Stored commitment matches` for the genuine historical receipt. The oracle card is an exact-round read, not a comparison with today's latest price.
+2. **13–28s — Show the preview.** The wallet-free preview visibly displays the configured chain context, price, observation age, round and ceiling-to-tinybar quantity. This is a reference quote, not a payment, and preview does not write.
 
-4. **40–52s — Show the offline boundary.** Click `Export receipt JSON`, then stop relying on the web app and run `npm run verify:quote -w @sh/hardhat -- --input <downloaded-file> --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api`. The valid result is calculation-checked and explicitly `onChainVerified: false`; the CLI's separate `historicalOracle` and `recordedComparison` results perform the read-only checks directly. If an independently selected expected quote is available, add its commitment, issuer and nonce flags; otherwise `expectedQuote` remains `not_supplied`.
+3. **28–41s — Compare the receipt.** The read-only comparison shows `Locally consistent`, `Historical observation matches`, and `Stored commitment matches` for the genuine historical receipt. The oracle card is an exact-round read, not a comparison with today's latest price.
 
-5. **52–68s — Show adversarial evidence.** In a terminal-only, read-only fixture check, change cents without changing tinybars/commitment: the API returns `invalid` / `not_checked` / `not_run`. Recompute cents, tinybars and commitment consistently: the API returns `valid` / `match` / `mismatch` against the genuine stored record. Recompute a false price instead: the historical oracle check also becomes `mismatch`. These forged-copy cases are API-tested; the UI intentionally has no receipt-import or forgery control.
+4. **42–56s — Export the receipt.** The actual `Export receipt JSON` action downloads the receipt. The browser result was semantically equal to the public historical fixture.
 
-6. **68–80s — Show recovery states.** Point to the visible stale-feed, changed-round and altered-receipt recovery cards. Explain that missing records, wrong context, wrong provider network and provider failure remain distinct and never trigger a write.
+5. **58–114s — Open the recorded standalone report.** The report presents the four measured CLI cases: genuine `valid/match/match`; one-tinybar tamper `invalid/not_checked/not_run`; recomputed amount `valid/match/mismatch`; and recomputed false price `valid/mismatch/mismatch`. The report is explicitly labeled as recorded standalone evidence, not QuoteProof UI.
 
-7. **80–90s — Show wallet safety evidence.** Run `npm run hardhat:test -- test/quoteWriteGuards.test.ts`. The deterministic mock harness proves one ready write is allowed, while wrong-network, pending and duplicate states make zero writer calls; a mocked signature rejection is surfaced once with no retry. No real signing is part of this demo.
+The recording is available through the prepared static viewer at `/demo/index.html` after the public asset update. The sanitized fixtures and result matrix are in [`docs/adversarial-evidence.md`](docs/adversarial-evidence.md).
 
-The real testnet transaction is historical evidence only. Publication, external scaffold execution and contest submission are separate owner-authorized gates.
+## Reproduce outside the recording
+
+These commands are separate from the video. From the repository root, run the standalone verifier against the public genuine fixture:
+
+```bash
+npm run verify:quote -w @sh/hardhat -- --input ../../examples/adversarial/genuine.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
+```
+
+For the four public fixtures, follow [`docs/adversarial-evidence.md`](docs/adversarial-evidence.md). Negative cases intentionally exit `2`. The optional deterministic guard test is separate as well:
+
+```bash
+npm run hardhat:test -- test/quoteWriteGuards.test.ts
+```
+
+The historical transaction is evidence only. Publication, external scaffold execution and contest submission remain separate owner-authorized gates.

@@ -17,6 +17,14 @@ npm ci
 
 The explicit skip-install path separates remote template generation from the lockfile install. CLI 0.4.0 successfully generated the public template from an empty directory. It intentionally removes `template.json` from the generated project; the source repository retains the manifest.
 
+## Organizer form status
+
+The draft is not submitted. The current form requires a public video URL under five minutes, a project description of no more than three sentences, a mainnet payout account ID, and five developer-experience ratings. The video URL remains pending final review and the public asset redeploy; the mainnet payout ID and ratings remain owner-private fields.
+
+Proposed three-sentence project description:
+
+> QuoteProof is a reusable Scaffold-HBAR template for Chainlink-priced USD-to-HBAR reference quotes with wallet-free receipt verification. A Solidity registry on Hedera Testnet validates the oracle observation, computes the amount with integer rounding and stores a commitment binding the recorded quote, while recipients independently compare the receipt's calculation, exact historical Chainlink round and stored registry commitment. Its exported receipts, standalone verifier, adversarial examples and tested policy-adaptation guide demonstrate why even a fabricated receipt with correct arithmetic and a genuine historical price fails the recorded-proof check; it does not settle payments or guarantee a currently payable price.
+
 ## Verified evidence
 
 - [x] Public repository published with owner authorization.
@@ -27,6 +35,7 @@ The explicit skip-install path separates remote template generation from the loc
 - [x] Complete external-scaffold release gate on Node 20.18.3/Linux: public CLI download at the pinned revision, source checks, clean install, all 34 tests, types, lint, production build and production startup. The generated app also passed the optional local/mock policy workshop: an incomplete `3,600`-second policy was rejected by the unchanged verifier, followed by the coordinated four-file patch and full mock suite. [Passing release run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720125222). [Regular CI on the same public commit](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720124038).
 - [x] Six read-only runtime checks passed on the generated app: homepage 200; live preview 200 with six string fields; invalid zero and oversized amounts 400; genuine receipt `valid/match/match`; altered receipt `invalid/not_checked/not_run`.
 - [x] Generated README commands were checked after CLI transformation; the manifest's optional deployment instruction forwards its arguments correctly.
+- [x] Sanitized four-case standalone evidence packet is published with inspectable fixtures, result matrix and a readable report; the genuine export semantically matches the public historical fixture.
 
 The current test count removes unused starter-token tests and includes five preview-route guard tests. The passing release run preserves the source reference, CLI output, install/static/build logs and runtime results as an artifact. It performs no signing or deployment.
 
@@ -45,7 +54,9 @@ Verification distinguishes local consistency, agreement with the exact historica
 
 ## Outstanding release and submission checks
 
-- [ ] Complete the final demo; receipt-download validation, desktop/browser comparison and hosted API checks are complete. Local Windows install/build validation was curtailed by disk and memory pressure; the complete generated-project gate passed on Linux.
+- [ ] Complete the final submission review; receipt-download validation, desktop/browser comparison and hosted API checks are complete. Local Windows install/build validation was curtailed by disk and memory pressure; the complete generated-project gate passed on Linux.
+- [ ] Complete final review and hosting of the 118.320-second recording, then provide its public URL in the organizer form; the prepared viewer path is `/demo/index.html`.
+- [ ] Provide the required mainnet payout account ID and five owner-supplied developer-experience ratings in the organizer form; these fields are intentionally absent from the public repository.
 - [ ] Complete the demo and final submission packet against the organizer's current requirements; locate and run the organizer self-check if available.
 - [ ] Review official terms and payout requirements, then obtain final competition-submission authorization.
 

@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:13.356 --> 00:00:20.140 line:0
+Public QuoteProof app loaded with the historical transaction; no wallet action or new write is used.
+
+2
+00:00:21.265 --> 00:00:28.462 line:0
+Wallet-free preview shows the configured reference quote and guarded write boundary.
+
+3
+00:00:28.463 --> 00:00:40.914 line:0
+Historical receipt comparison is read-only and shows the stored and historical matches.
+
+4
+00:00:42.363 --> 00:00:55.623 line:0
+The actual Export receipt JSON action is exercised on the public page and compared with the known fixture.
+
+5
+00:00:58.493 --> 00:01:06.925 line:0
+Recorded standalone verification evidence, executed from actual CLI results; not QuoteProof UI.
+
+6
+00:01:07.364 --> 00:01:14.835 line:0
+Genuine receipt: standalone verification records valid, historical match, and stored match.
+
+7
+00:01:14.835 --> 00:01:21.879 line:0
+A one-tinybar tamper fails local consistency before provider comparisons run.
+
+8
+00:01:21.879 --> 00:01:35.991 line:0
+A recomputed amount can pass local arithmetic and historical round checks while differing from the stored commitment.
+
+9
+00:01:36.112 --> 00:01:46.162 line:0
+A recomputed false price fails both the historical oracle and stored commitment comparisons.
+
+10
+00:01:46.281 --> 00:01:54.338 line:0
+Recorded CLI evidence is historical and read-only; it is not payment, current-price, identity, or live-wallet truth.

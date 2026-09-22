@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuoteProof recorded verification report</title>
+<style>body{max-width:1120px;margin:2rem auto;padding:0 1rem;font:16px/1.5 system-ui,sans-serif}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #8886;padding:.65rem;text-align:left}.pass{color:#138a45;font-weight:700}.note{border-left:.3rem solid #888;padding:.5rem 1rem}</style>
+<h1>Recorded standalone verification evidence</h1>
+<p class="pass">Four-case run: passed.</p>
+<p class="note">Read-only CLI evidence, not a live UI result, payment proof, current-price guarantee, identity proof, or wallet/signing test.</p>
+<table><thead><tr><th>Case</th><th>Change</th><th>Exit</th><th>Local</th><th>Historical</th><th>Recorded</th></tr></thead><tbody>
+<tr><td>genuine</td><td>exported receipt</td><td>0</td><td>valid</td><td>match</td><td>match</td></tr>
+<tr><td>simple tamper</td><td>tinybars + 1; commitment unchanged</td><td>2</td><td>invalid</td><td>not_checked</td><td>not_run</td></tr>
+<tr><td>recomputed amount</td><td>cents 100 → 1000; amount and commitment recomputed</td><td>2</td><td>valid</td><td>match</td><td>mismatch</td></tr>
+<tr><td>false price</td><td>price doubled; amount and commitment recomputed</td><td>2</td><td>valid</td><td>mismatch</td><td>mismatch</td></tr>
+</tbody></table>
+<p>The inspectable fixtures and portable command are in the <a href="https://github.com/ref-dev22/quoteproof-template/tree/main/examples/adversarial">public repository</a>; the full report is <a href="https://github.com/ref-dev22/quoteproof-template/blob/main/evidence/HED-final-demo-20260922/verification-report.html">here</a>.</p>
