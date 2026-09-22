@@ -21,16 +21,16 @@ The explicit skip-install path separates remote template generation from the loc
 
 - [x] Public repository published with owner authorization.
 - [x] External CLI scaffold from the public repository completed successfully using the scaffold command above.
-- [x] Linux CI on Node 20.18.3 passed clean install, contract compile, all 34 tests, both TypeScript checks, both zero-warning lint checks and the production build. [Implementation CI run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35713606171).
+- [x] Linux CI on Node 20.18.3 passed clean install, contract compile, all 34 tests, both TypeScript checks, both zero-warning lint checks and the production build. [Implementation CI run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720124038) for public commit `28e48d4`.
 - [x] Genuine Hedera Testnet deployment and successful `QuoteRecorded` transaction, independently rechecked through Mirror Node on 22 September 2026.
 - [x] Contract, receipt, historical-oracle comparison, stored-commitment comparison and route-guard tests. Default tests use local mocks and do not deploy or require credentials.
-- [x] Complete external-scaffold release gate on Node 20.18.3/Linux: public CLI download at the pinned revision, source checks, clean install, all 34 tests, types, lint, production build and production startup. [Passing release run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35714035181). [Regular CI on the same revision](https://github.com/ref-dev22/quoteproof-template/actions/runs/35713606171).
+- [x] Complete external-scaffold release gate on Node 20.18.3/Linux: public CLI download at the pinned revision, source checks, clean install, all 34 tests, types, lint, production build and production startup. The generated app also passed the optional local/mock policy workshop: an incomplete `3,600`-second policy was rejected by the unchanged verifier, followed by the coordinated four-file patch and full mock suite. [Passing release run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720125222). [Regular CI on the same public commit](https://github.com/ref-dev22/quoteproof-template/actions/runs/35720124038).
 - [x] Six read-only runtime checks passed on the generated app: homepage 200; live preview 200 with six string fields; invalid zero and oversized amounts 400; genuine receipt `valid/match/match`; altered receipt `invalid/not_checked/not_run`.
 - [x] Generated README commands were checked after CLI transformation; the manifest's optional deployment instruction forwards its arguments correctly.
 
 The current test count removes unused starter-token tests and includes five preview-route guard tests. The passing release run preserves the source reference, CLI output, install/static/build logs and runtime results as an artifact. It performs no signing or deployment.
 
-The public Vercel deployment separately passed its remote build and all six unauthenticated HTTP/API checks. Browser testing loaded the historical receipt and displayed all three comparison matches; desktop screenshots were captured on the deployed implementation. The preceding hosting revision also passed a simulated 390-pixel mobile layout check and copy-share interaction. No physical-device or live-wallet interaction test is claimed. The browser harness repeatedly cancelled receipt-file downloads; export remains unverified despite delayed Blob URL cleanup and must not be presented as a passing download test.
+The public Vercel deployment separately passed its remote build and all six unauthenticated HTTP/API checks. Browser testing loaded the historical receipt and displayed all three comparison matches; desktop screenshots were captured on the deployed implementation. A measured 22 September 2026 Playwright 1.62.1 / Chromium 1234 HTTPS run downloaded the actual Export receipt JSON successfully at 615 bytes, semantically matched `examples/receipt-testnet.json`, and produced standalone CLI `valid/match/match` with exit code `0`; a copied receipt with a one-tinybar change produced `invalid` with exit code `2`. The earlier agent-browser cancellation root cause remains unresolved. No physical-device or live-wallet interaction test is claimed.
 
 ## Public testnet evidence
 
@@ -45,7 +45,7 @@ Verification distinguishes local consistency, agreement with the exact historica
 
 ## Outstanding release and submission checks
 
-- [ ] Complete the final demo and receipt-download validation; desktop/browser comparison and hosted API checks are complete. Local Windows install/build validation was curtailed by disk and memory pressure; the complete generated-project gate passed on Linux.
+- [ ] Complete the final demo; receipt-download validation, desktop/browser comparison and hosted API checks are complete. Local Windows install/build validation was curtailed by disk and memory pressure; the complete generated-project gate passed on Linux.
 - [ ] Complete the demo and final submission packet against the organizer's current requirements; locate and run the organizer self-check if available.
 - [ ] Review official terms and payout requirements, then obtain final competition-submission authorization.
 
