@@ -94,7 +94,7 @@ jobs:
             }
             return value;
           };
-          const [sourcePath, generatedPath] = process.argv.slice(1);
+          const [sourcePath, generatedPath] = process.argv.slice(2);
           const source = normalize(JSON.parse(fs.readFileSync(sourcePath, "utf8")));
           const generated = normalize(JSON.parse(fs.readFileSync(generatedPath, "utf8")));
           if (JSON.stringify(source) !== JSON.stringify(generated)) {
