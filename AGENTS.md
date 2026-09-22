@@ -4,7 +4,7 @@ QuoteProof is a Scaffold-HBAR-derived Next.js/Hardhat app. Keep upstream attribu
 
 ## Commands
 
-Use the committed npm lockfile and Node.js `>=20.18.3`:
+Use the committed `npm` lockfile and Node.js `>=20.18.3`:
 
 ```bash
 npm ci

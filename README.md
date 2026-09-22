@@ -31,24 +31,24 @@ Historical confirmed testnet proof (read-only): [QuoteProof transaction on HashS
 The template repository is [`ref-dev22/quoteproof-template`](https://github.com/ref-dev22/quoteproof-template), branch `main`. The official CLI also supports an interactive setup:
 
 ```bash
-npm create scaffold-hbar@latest
-# equivalent:
 npx create-scaffold-hbar@latest
 ```
 
 Choose the template, Next.js frontend, Hardhat, and testnet in the prompts. To scaffold this template directly:
 
 ```bash
-npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --ci --skip-hedera-skills
+npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
+cd quoteproof
+npm ci
 ```
 
-This candidate's `template.json` intentionally selects Next.js, Hardhat, and npm. The current CLI supports npm and Yarn; do not infer package-manager behavior from older yarn-only README text. `--ci` is non-interactive and installs Hedera Skills by default, so `--skip-hedera-skills` is included for a minimal reproducible smoke run. See the [create-scaffold-hbar CLI](https://github.com/hedera-dev/create-scaffold-hbar) and its [template manifest source](https://raw.githubusercontent.com/hedera-dev/create-scaffold-hbar/main/src/types.ts) for the current option and manifest contract.
+The source `template.json` selects Next.js, Hardhat, and `npm`. `--ci` makes scaffolding non-interactive; `--skip-hedera-skills` keeps optional agent skills out of the minimal setup. `--skip-install` separates generation from the reproducible `npm ci` install, which the manifest also prints as the next step. Keep the quotes around the package-manager value: CLI 0.4.0 rewrites bare package-manager names in generated Markdown. See the [create-scaffold-hbar CLI](https://github.com/hedera-dev/create-scaffold-hbar) and its [template manifest source](https://raw.githubusercontent.com/hedera-dev/create-scaffold-hbar/main/src/types.ts).
 
-The local candidate has no configured public `origin`, so the command above is a prepared publication gate, not a claim that the remote scaffold has already been tested. The CLI fetches community templates from `org/repo` or `org/repo#branch`, reads `template.json`, then removes that manifest from the generated project.
+The CLI fetches this public repository from `org/repo#branch`, reads `template.json`, then intentionally removes that manifest from the generated project. The generated app retains the source code, lockfile, README and agent instructions.
 
 ## Prerequisites and safe testnet setup
 
-- Node.js `>=20.18.3`, Git with `user.name` and `user.email`, and npm.
+- Node.js `>=20.18.3`, Git with `user.name` and `user.email`, and `npm`.
 - This candidate uses Hardhat, so Foundry is not required.
 - No wallet, faucet funds, account key, or paid API is needed for the preview or deterministic tests.
 - The deployer setup is local and encrypted. From the repository root, run one of:
@@ -71,7 +71,7 @@ The local candidate has no configured public `origin`, so the command above is a
 
 ## Work from this checkout
 
-Use the committed npm lockfile and Node.js `>=20.18.3`. `npm ci` is the reproducible install; use `npm install` only when intentionally changing dependencies.
+Use the committed `npm` lockfile and Node.js `>=20.18.3`. `npm ci` is the reproducible install; use `npm install` only when intentionally changing dependencies.
 
 ```bash
 npm ci

@@ -1,44 +1,48 @@
 # QuoteProof submission draft
 
-This tracks the owner-authorized publication preparation. It does not claim that the repository has been published or that the competition entry has been submitted.
+The repository is public. The competition entry has not been submitted. This file records verified release evidence and outstanding submission checks.
 
-## Authorized publication target
+## Public repository and scaffold
 
-- Repository: `https://github.com/ref-dev22/quoteproof-template`
+- Repository: https://github.com/ref-dev22/quoteproof-template
 - Default branch: `main`
-- Candidate revision: update to the final publication commit after local checks
-- External scaffold command after publication:
+- Validated implementation revision: `8b6a564`; subsequent documentation-only changes are tracked in Git.
 
-  ```bash
-  npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --ci --skip-hedera-skills
-  ```
+```bash
+npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
+cd quoteproof
+npm ci
+```
 
-## Eligibility and proof packet
+The explicit skip-install path separates remote template generation from the lockfile install. CLI 0.4.0 successfully generated the public template from an empty directory. It intentionally removes `template.json` from the generated project; the source repository retains the manifest.
 
-- [x] Owner authorizes publication of the target owner/repository.
-- [ ] Push the clean candidate revision; preserve the exact commit hash.
-- [ ] Run the external-template command from an empty directory.
-- [ ] Run install, Hardhat tests, compile, frontend type-check/lint, production build, and app boot from the generated project.
-- [ ] Confirm `GET /api/quote/preview?cents=100` returns HTTP 200 with all six decimal-string fields.
-- [ ] Add the final remote scaffold log and URL to the private evidence packet.
-- [ ] Recheck the official contest self-check, terms, payout and submission form when published.
-- [ ] Submit only after the owner reviews the completed packet and explicitly authorizes submission.
+## Verified evidence
 
-## Current verified evidence
+- [x] Public repository published with owner authorization.
+- [x] External CLI scaffold from the public repository completed successfully using the scaffold command above.
+- [x] Linux CI on Node 20.18.3 passed clean install, contract compile, all 34 tests, both TypeScript checks, both zero-warning lint checks and the production build. [Implementation CI run](https://github.com/ref-dev22/quoteproof-template/actions/runs/35693123326).
+- [x] Genuine Hedera Testnet deployment and successful `QuoteRecorded` transaction, independently rechecked through Mirror Node on 22 September 2026.
+- [x] Contract, receipt, historical-oracle comparison, stored-commitment comparison and route-guard tests. Default tests use local mocks and do not deploy or require credentials.
 
-- Genuine Hedera Testnet deployment and `QuoteRecorded` transaction are recorded privately.
-- Wallet-free browser preview, receipt-link recovery, and visible stale/changed-round/altered-receipt exercises are recorded privately.
-- Read-only comparison now demonstrates genuine local/historical-oracle/stored `valid/match/match`, simple-tamper `invalid/not_checked/not_run`, recomputed amount forgery `valid/match/mismatch`, false-price forgery with historical/stored mismatches, missing-record `not_found`, wrong-context rejection, wrong-network guarding, and provider failure without another write.
-- The direct `verify:quote --compare-stored` path performs the same registry/oracle reads without the Next.js server. The independent expected-quote check requires separately supplied commitment/issuer/nonce and reports `not_supplied`, `not_checked`, `match`, or `mismatch`; two genuine fixtures are independently authentic but a different quote is rejected for the expected quote.
-- Public local clean-room install/build/boot passes at `0dbe33a`; the current working candidate additionally passes 38 Hardhat tests, zero-warning Hardhat/frontend lint, type-check, production build, route-guard regressions, true 375/320px mobile DOM checks, the narrow-layout fix, direct CLI read-only verification, and the local endpoint adversarial checks in this checkout.
-- The public CI workflow is deterministic (`npm ci`, compile, tests, types, lint, build) and does not deploy contracts or require wallet/private secrets. `AGENTS.md` and `DEMO-SCRIPT.md` describe the actual QuoteProof paths and the API-only forged-copy demonstration.
-- A bounded independent README walkthrough used an exact local-source export of `5ee3a5f` as an explicitly documented pre-publication substitution for the unavailable remote repository. It confirmed Node `v24.18.0`/npm `11.6.2`, no-secret prerequisites, and `npm ci` exit `0`; the same clean copy passed 37 Hardhat tests, compile, Hardhat/frontend types and lint, production build, production boot on port `3002`, `GET /` 200, preview 200 with all six decimal-string fields, and compare 200 with local/historical/stored `valid/match/match`. The first cold `next dev` route compile exceeded its bounded probe, so that dev cold-start behavior is not claimed; production release boot/routes passed. This local-source result is not the literal remote scaffold gate. The follow-up source revision `150eece` was then exported without `.git` or ignored deployment artifacts; after `npm ci --offline --ignore-scripts`, the documented explicit-context `verify:quote --compare-stored` command passed with exit code `0`, `valid`, historical `match`, and stored `match`.
-- The manifest is local and validated against the current official CLI schema; the remote command remains unrun because the repository is not published.
+The current test count removes unused starter-token tests and includes five preview-route guard tests. Earlier local-source clean-room and browser checks covered previous revisions; they are not presented as a completed release check of the current remote-generated copy.
 
-## Honest remaining gates
+## Public testnet evidence
 
-- Remote repository publication and external CLI scaffold run.
-- Run the literal remote scaffold test after publication; the local-source D6 substitution does not satisfy that separate mandatory gate.
-- Correctness follow-ups from `150eece` remain covered: when `--compare-stored` is requested, the CLI exits non-zero for every stored or historical status other than `match`, while an absent optional expected quote remains non-fatal; deterministic negative-path coverage is included in the Hardhat suite. Root and package verifier examples provide explicit chain, registry, and oracle context (and label `--allow-foreign-context` as offline-only), so the documented fresh-source command does not depend on ignored deployment artifacts. The authorized publication revision also disables accidental forked/gas-reporting tests, removes unused starter token scaffolding, and guards the preview RPC with bounded input, chain, timeout, and response handling.
-- The mocked wallet guard matrix is complete; real wallet rejection, wrong-network, pending, and duplicate-click interaction remains intentionally unclaimed because no live signing or additional wallet harness was authorized.
-- Official organizer terms and final submission authorization.
+- Chain ID: `296`
+- Registry: `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`
+- Chainlink oracle: `0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`
+- Contract ID: `0.0.10645852`
+- [Recorded transaction on HashScan](https://hashscan.io/testnet/transaction/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9)
+- [Public Mirror Node contract result](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9)
+
+Verification distinguishes local consistency, agreement with the exact historical Chainlink round, and agreement with the registry's stored commitment. The standalone CLI also supports an independently supplied expected issuer, nonce and commitment together. A reference quote is not proof of payment, an invoice binding or a currently payable price.
+
+## Outstanding release and submission checks
+
+- [ ] Complete install, tests, types, lint and production build in the current remote-generated Windows copy. An earlier attempt failed with local disk exhaustion; Linux CI passed separately.
+- [ ] Boot that generated copy and check homepage, live preview, genuine receipt comparison and altered-receipt rejection through the API and browser.
+- [ ] Confirm final documentation survives the external CLI's Markdown transformation.
+- [ ] Complete the demo and final submission packet against the organizer's current requirements; locate and run the organizer self-check if available.
+- [ ] Review official terms and payout requirements, then obtain final competition-submission authorization.
+
+No additional live wallet interaction, signing, deployment or payment is claimed by these read-only release checks. The template currently uses a Solidity registry on Hedera and Chainlink; it does not implement HCS, HSS, HTS, settlement or quote expiry.
