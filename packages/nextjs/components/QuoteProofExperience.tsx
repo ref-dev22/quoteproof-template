@@ -300,7 +300,8 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     link.href = url;
     link.download = `quoteproof-${activeHash.slice(2, 10)}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    // Give the browser time to consume the blob URL before releasing it.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const compareStoredReceipt = async () => {

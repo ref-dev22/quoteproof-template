@@ -8,6 +8,8 @@ The [passing external-scaffold release check](https://github.com/ref-dev22/quote
 
 ## Try the experience
 
+Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no wallet connection or new transaction. For your own deployment, see [hosting instructions](docs/hosting.md).
+
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
 
 ```bash
