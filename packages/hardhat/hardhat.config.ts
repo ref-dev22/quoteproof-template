@@ -23,8 +23,7 @@ import generateTsAbis from "./scripts/generateTsAbis";
 const hederaRpcUrl = process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api";
 
 // Deployer key: run `npm run account:generate` or `npm run account:import`, or set __RUNTIME_DEPLOYER_PRIVATE_KEY at runtime.
-const deployerPrivateKey =
-  process.env.__RUNTIME_DEPLOYER_PRIVATE_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const deployerPrivateKey = process.env.__RUNTIME_DEPLOYER_PRIVATE_KEY;
 
 const hardhatNetwork =
   process.env.HEDERA_FORKING === "true"
@@ -63,12 +62,12 @@ const config: HardhatUserConfig = {
     hardhat: hardhatNetwork,
     hederaTestnet: {
       url: "https://testnet.hashio.io/api",
-      accounts: [deployerPrivateKey],
+      accounts: deployerPrivateKey ? [deployerPrivateKey] : [],
       chainId: 296,
     },
     hederaMainnet: {
       url: "https://mainnet.hashio.io/api",
-      accounts: [deployerPrivateKey],
+      accounts: deployerPrivateKey ? [deployerPrivateKey] : [],
       chainId: 295,
     },
   },
@@ -86,6 +85,9 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: "typechain-types",
     target: "ethers-v6",
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS === "true",
   },
 };
 

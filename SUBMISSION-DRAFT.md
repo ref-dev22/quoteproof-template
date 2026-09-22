@@ -1,12 +1,12 @@
 # QuoteProof submission draft
 
-This is a preparation artifact only. It does not publish the repository or submit the competition entry.
+This tracks the owner-authorized publication preparation. It does not claim that the repository has been published or that the competition entry has been submitted.
 
-## Proposed public repository
+## Authorized publication target
 
 - Repository: `https://github.com/ref-dev22/quoteproof-template`
 - Default branch: `main`
-- Candidate revision: `150eece`
+- Candidate revision: update to the final publication commit after local checks
 - External scaffold command after publication:
 
   ```bash
@@ -15,7 +15,7 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 ## Eligibility and proof packet
 
-- [ ] Owner authorizes the repository publication and confirms the target owner/repository.
+- [x] Owner authorizes publication of the target owner/repository.
 - [ ] Push the clean candidate revision; preserve the exact commit hash.
 - [ ] Run the external-template command from an empty directory.
 - [ ] Run install, Hardhat tests, compile, frontend type-check/lint, production build, and app boot from the generated project.
@@ -39,6 +39,6 @@ This is a preparation artifact only. It does not publish the repository or submi
 
 - Remote repository publication and external CLI scaffold run.
 - Run the literal remote scaffold test after publication; the local-source D6 substitution does not satisfy that separate mandatory gate.
-- Correctness follow-ups are closed in `150eece`: when `--compare-stored` is requested, the CLI now exits non-zero for every stored or historical status other than `match`, while an absent optional expected quote remains non-fatal; deterministic negative-path coverage is included in the Hardhat suite. Root and package verifier examples now provide explicit chain, registry, and oracle context (and label `--allow-foreign-context` as offline-only), so the documented fresh-source command does not depend on ignored deployment artifacts.
+- Correctness follow-ups from `150eece` remain covered: when `--compare-stored` is requested, the CLI exits non-zero for every stored or historical status other than `match`, while an absent optional expected quote remains non-fatal; deterministic negative-path coverage is included in the Hardhat suite. Root and package verifier examples provide explicit chain, registry, and oracle context (and label `--allow-foreign-context` as offline-only), so the documented fresh-source command does not depend on ignored deployment artifacts. The authorized publication revision also disables accidental forked/gas-reporting tests, removes unused starter token scaffolding, and guards the preview RPC with bounded input, chain, timeout, and response handling.
 - The mocked wallet guard matrix is complete; real wallet rejection, wrong-network, pending, and duplicate-click interaction remains intentionally unclaimed because no live signing or additional wallet harness was authorized.
 - Official organizer terms and final submission authorization.

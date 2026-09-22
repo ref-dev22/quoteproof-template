@@ -4,7 +4,7 @@ const { spawnSync } = require("node:child_process");
 const mode = process.argv[2];
 const args = process.argv.slice(3);
 const commands = {
-  test: { env: { HEDERA_FORKING: "true", REPORT_GAS: "true" }, args: ["test"] },
+  test: { env: { HEDERA_FORKING: "false", REPORT_GAS: "false" }, args: ["test"] },
   chain: { env: { HEDERA_FORKING: "true" }, args: ["node", "--network", "hardhat", "--no-deploy"] },
   fork: {
     env: { HEDERA_FORKING: "true", MAINNET_FORKING_ENABLED: "true" },

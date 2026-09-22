@@ -28,7 +28,7 @@ Historical confirmed testnet proof (read-only): [QuoteProof transaction on HashS
 
 ## Create a project from the CLI
 
-The official CLI is interactive. The current proposed public repository for this candidate is `ref-dev22/quoteproof-template`, branch `main`:
+The template repository is [`ref-dev22/quoteproof-template`](https://github.com/ref-dev22/quoteproof-template), branch `main`. The official CLI also supports an interactive setup:
 
 ```bash
 npm create scaffold-hbar@latest
@@ -36,7 +36,7 @@ npm create scaffold-hbar@latest
 npx create-scaffold-hbar@latest
 ```
 
-Choose the template, Next.js frontend, Hardhat or Foundry, and network in the prompts. After publication and owner approval, the exact external-template smoke command is:
+Choose the template, Next.js frontend, Hardhat, and testnet in the prompts. To scaffold this template directly:
 
 ```bash
 npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --ci --skip-hedera-skills
@@ -214,10 +214,10 @@ All are optional for the wallet-free preview unless noted.
 - `DEMO-SCRIPT.md` — reproducible 90-second read-only demo, including direct CLI and API-only forged-copy cases
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
-- `SUBMISSION-DRAFT.md` — proposed repository, exact external scaffold command, and owner-gated release checklist
+- `SUBMISSION-DRAFT.md` — publication target, exact external scaffold command, and release checklist
 
 AI-assisted implementation and review were used for this release candidate. The evidence is reproducible from the commands above; no private vault instructions, credentials, or private task material are part of the public template.
 
 ## Release status
 
-The isolated baseline, live testnet provenance, contract guards, genuine testnet quote proof, and browser-tested experience are recorded in the private evidence index while the public checkout remains reviewable. A remote template publication, clean-room scaffold run from that remote template, and final contest submission are separate gates and are not claimed by this local README.
+This is a testnet reference template. The linked historical transaction demonstrates a recorded QuoteProof receipt; local tests cover contract guards, receipt verification and API failures. Release validation and competition submission are tracked separately in `SUBMISSION-DRAFT.md`.
