@@ -109,10 +109,10 @@ Testnet deployment and receipt creation require a Hedera-created ECDSA account a
 # requires the local encrypted deployer setup
 npm run hardhat:deploy -- --network hederaTestnet --tags QuoteProof
 npm run quote:e2e -w @sh/hardhat -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
 ```
 
-Both workspace commands run with `packages/hardhat` as their working directory, so the explicit output is `packages/hardhat/quoteproof-receipt.json` and the verifier consumes that same file. Keep this credentialed flow local.
+Both workspace commands run with `packages/hardhat` as their working directory, so the explicit output is `packages/hardhat/quoteproof-receipt.json` and the verifier consumes that same file. After this local deployment, the verifier loads the registry and oracle from the ignored `deployments/hederaTestnet/QuoteProofRegistry.json` artifact. The separate historical-fixture command below passes the published reference addresses explicitly. Keep this credentialed flow local.
 
 Never put a private key, encrypted keystore, or funded-account material in the repository or browser environment. Testnet credentials stay local and ignored.
 

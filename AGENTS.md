@@ -24,8 +24,10 @@ npm run hardhat:account:generate
 npm run hardhat:account:import
 npm run hardhat:deploy -- --network hederaTestnet --tags QuoteProof
 npm run quote:e2e -w @sh/hardhat -- --network hederaTestnet --cents 100 --output ./quoteproof-receipt.json
-npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a
+npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
 ```
+
+The verifier loads the registry and oracle from the ignored local `deployments/hederaTestnet/QuoteProofRegistry.json` after this deploy. Supply explicit expected addresses when checking the committed historical fixture from a fresh source export.
 
 Never paste keys or encrypted keystores into chat, source, browser fields, or committed files. Do not repeat the historical testnet write merely to demonstrate the app.
 
