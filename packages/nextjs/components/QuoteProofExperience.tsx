@@ -17,13 +17,14 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
+import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
 import { canWriteQuote, friendlyWriteError } from "~~/utils/quoteWrite";
 import { getBlockExplorerTxLink } from "~~/utils/scaffold-hbar";
 
 const TESTNET_CHAIN_ID = hederaTestnet.id;
 const MAX_CENTS = 100_000_000n;
-const REGISTRY_ADDRESS = "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709" as Hex;
+const REGISTRY_ADDRESS = getQuoteProofRegistryAddress();
 
 const quoteRecordedAbi = [
   {

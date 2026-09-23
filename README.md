@@ -2,9 +2,9 @@
 
 QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quote inspectable before a wallet write. Enter a bounded USD amount, read the configured testnet observation, and—only when a supported wallet is ready—record an event-bound receipt. The contract records evidence; it never transfers HBAR and does not confirm a payment.
 
-The current public checkout is a reviewable Scaffold-HBAR template at verified app/demo baseline `985f15f`. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience. Later commits may update documentation only; the pinned CI and external-scaffold runs below are evidence for `985f15f`, not for every future commit.
+The hosted app and recorded demo were verified at implementation baseline `985f15f`. This template keeps the upstream Hardhat/Next.js structure and adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused developer experience. Check a run's commit SHA before applying its results to a later revision.
 
-The [CI workflow](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and [external-scaffold release workflow](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059) passed for the verified `985f15f` baseline, covering the reproducible install, source checks, compile, 34 tests, types, lint, build, scaffold generation and runtime/API checks. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
+The public `3092716` source/docs checkpoint passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832893645) and the [fresh external-scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832913537), covering install, source checks, compile, 34 tests, types, lint, build, scaffold generation and runtime/API checks. The hosted `985f15f` app/demo baseline separately passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and its [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059). A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification. These recorded runs do not establish a pass for later code changes.
 
 ## Try the experience
 
@@ -93,7 +93,7 @@ npm run next:build
 npm run hardhat:chain
 ```
 
-This checkout does not provide a supported local deployment-and-retarget workflow. Keep the forked node separate from the wallet-free preview and use the mock-only workshop below for deterministic adaptation.
+The credentialed testnet deploy task regenerates `packages/nextjs/contracts/deployedContracts.ts`. The Scaffold read/write hooks, wallet-free preview, receipt UI, and read-only comparison route all take the registry address from that generated file. Restart the Next.js app after deploying your own testnet registry. The Chainlink HBAR/USD testnet proxy remains fixed in the deploy script and QuoteProof context; changing providers requires reviewing both and revalidating the contract and verifier. The committed historical fixture and hosted demo belong to the published reference registry; they are not proof for your new deployment. A forked local node is still a separate experiment, not a complete supported local app mode. Use the mock-only workshop below for deterministic adaptation without credentials.
 
 For a deterministic local adaptation, use the mock-only policy workshop. It exercises the existing contract mock, standalone verifier, and mocked comparison route without a fork, wallet, RPC, live deployment, or live write:
 
@@ -234,10 +234,10 @@ All are optional for the wallet-free preview unless noted.
 - `docs/local-policy-workshop.md` — disposable mock-only policy adaptation and validation
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
-- `SUBMISSION-DRAFT.md` — publication target, exact external scaffold command, and release checklist
+- `SUBMISSION-DRAFT.md` — concise reviewer evidence, exact scaffold command, and proof links
 
 AI-assisted implementation and review were used for this template. The evidence is reproducible from the commands above; no private vault instructions, credentials, or private task material are part of the public template.
 
 ## Release status
 
-This is a testnet reference template. The linked historical transaction demonstrates a recorded QuoteProof receipt; local tests cover contract guards, receipt verification and API failures. Release validation and competition submission are tracked separately in `SUBMISSION-DRAFT.md`.
+This is a testnet reference template. The linked historical transaction demonstrates a recorded QuoteProof receipt; local tests cover contract guards, receipt verification and API failures. The reviewer evidence in `SUBMISSION-DRAFT.md` does not claim organizer acceptance.

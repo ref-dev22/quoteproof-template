@@ -4,12 +4,14 @@ import {
   verifyReceiptObject,
 } from "../../../../../hardhat/utils/quoteReceipt";
 import { compareHistoricalOracle, compareStoredCommitment } from "../../../../../hardhat/utils/quoteReceiptComparison";
+import {
+  QUOTE_PROOF_ORACLE_ADDRESS,
+  QUOTE_PROOF_TESTNET_CHAIN_ID,
+  getQuoteProofRegistryAddress,
+} from "../../../../contracts/quoteProofContext";
 import { type Hex, decodeFunctionResult, encodeFunctionData } from "viem";
 
 const RPC_URL = process.env.NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL || "https://testnet.hashio.io/api";
-const EXPECTED_CHAIN_ID = 296n;
-const EXPECTED_REGISTRY = "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709" as const;
-const EXPECTED_ORACLE = "0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a" as const;
 const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
 const MAX_REQUEST_BYTES = 64 * 1024;
 
@@ -144,12 +146,16 @@ function contextMismatch(errors: string[]): boolean {
   );
 }
 
-function invalidResponse(error: string): ComparisonResponse {
+function invalidResponse(error: string, registry: Hex): ComparisonResponse {
   return {
     localConsistency: { status: "invalid", errors: [error] },
     recordedComparison: { status: "not_run" },
     historicalOracle: { status: "not_checked", requestedRoundId: "0" },
-    context: { chainId: EXPECTED_CHAIN_ID.toString(), registry: EXPECTED_REGISTRY, oracle: EXPECTED_ORACLE },
+    context: {
+      chainId: QUOTE_PROOF_TESTNET_CHAIN_ID.toString(),
+      registry,
+      oracle: QUOTE_PROOF_ORACLE_ADDRESS,
+    },
   };
 }
 
@@ -196,6 +202,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(request: Request) {
+  const registry = getQuoteProofRegistryAddress();
   let receipt: QuoteReceiptJson;
   try {
     const body = JSON.parse(await readRequestBody(request)) as { receipt?: unknown };
@@ -205,35 +212,40 @@ export async function POST(request: Request) {
     if (error instanceof RequestTooLargeError) {
       return Response.json({ error: error.message }, { status: 413 });
     }
-    return Response.json(invalidResponse(error instanceof Error ? error.message : "Receipt must be valid JSON"), {
-      status: 400,
-    });
+    return Response.json(
+      invalidResponse(error instanceof Error ? error.message : "Receipt must be valid JSON", registry),
+      { status: 400 },
+    );
   }
 
   const local = verifyReceiptObject(receipt, {
-    expectedChainId: EXPECTED_CHAIN_ID,
-    expectedRegistry: EXPECTED_REGISTRY,
-    expectedOracle: EXPECTED_ORACLE,
+    expectedChainId: QUOTE_PROOF_TESTNET_CHAIN_ID,
+    expectedRegistry: registry,
+    expectedOracle: QUOTE_PROOF_ORACLE_ADDRESS,
   });
   const localStatus = contextMismatch(local.errors) ? "wrong_context" : local.valid ? "valid" : "invalid";
   const responseBase: ComparisonResponse = {
     localConsistency: { status: localStatus, errors: local.errors },
     recordedComparison: { status: localStatus === "wrong_context" ? "wrong_context" : "not_run" },
     historicalOracle: historicalOracleNotChecked(receipt.roundId),
-    context: { chainId: EXPECTED_CHAIN_ID.toString(), registry: EXPECTED_REGISTRY, oracle: EXPECTED_ORACLE },
+    context: {
+      chainId: QUOTE_PROOF_TESTNET_CHAIN_ID.toString(),
+      registry,
+      oracle: QUOTE_PROOF_ORACLE_ADDRESS,
+    },
   };
 
   if (localStatus !== "valid") return Response.json(responseBase);
 
   try {
     const providerChain = await rpcChainId();
-    if (providerChain.value !== EXPECTED_CHAIN_ID) {
+    if (providerChain.value !== QUOTE_PROOF_TESTNET_CHAIN_ID) {
       return Response.json({
         ...responseBase,
         recordedComparison: {
           status: "wrong_network",
           providerChainId: providerChain.hex,
-          error: `Reference provider reported chainId ${providerChain.value}; expected ${EXPECTED_CHAIN_ID}`,
+          error: `Reference provider reported chainId ${providerChain.value}; expected ${QUOTE_PROOF_TESTNET_CHAIN_ID}`,
         },
       });
     }
@@ -241,7 +253,7 @@ export async function POST(request: Request) {
     const issuer = receipt.issuer as `0x${string}`;
     const nonce = BigInt(receipt.nonce);
     const storedRaw = await rpcCall(
-      EXPECTED_REGISTRY,
+      registry,
       encodeFunctionData({ abi: getCommitmentAbi, functionName: "getCommitment", args: [issuer, nonce] }),
       1,
     );
@@ -253,7 +265,7 @@ export async function POST(request: Request) {
     if (!BYTES32_RE.test(storedCommitment)) throw new Error("Reference provider returned an invalid commitment");
 
     const storedCheckRaw = await rpcCall(
-      EXPECTED_REGISTRY,
+      registry,
       encodeFunctionData({
         abi: isStoredCommitmentAbi,
         functionName: "isStoredCommitment",
@@ -274,7 +286,7 @@ export async function POST(request: Request) {
     let historicalOracle = historicalOracleNotChecked(receipt.roundId);
     try {
       const roundRaw = await rpcCall(
-        EXPECTED_ORACLE,
+        QUOTE_PROOF_ORACLE_ADDRESS,
         encodeFunctionData({ abi: getRoundDataAbi, functionName: "getRoundData", args: [BigInt(receipt.roundId)] }),
         3,
       );
@@ -284,7 +296,7 @@ export async function POST(request: Request) {
         data: roundRaw,
       }) as readonly [bigint, bigint, bigint, bigint, bigint];
       const decimalsRaw = await rpcCall(
-        EXPECTED_ORACLE,
+        QUOTE_PROOF_ORACLE_ADDRESS,
         encodeFunctionData({ abi: decimalsAbi, functionName: "decimals" }),
         4,
       );
