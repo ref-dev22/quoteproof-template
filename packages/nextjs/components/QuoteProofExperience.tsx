@@ -637,7 +637,7 @@ const QuoteProofExperience = () => {
 
   return (
     <div className="flex grow flex-col bg-base-200">
-      <section className="hedera-gradient px-5 pb-12 pt-8 text-white sm:pb-20 sm:pt-14">
+      <section className="hedera-gradient px-5 pb-10 pt-6 text-white sm:pb-20 sm:pt-14">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span className="badge border-white/20 bg-white/10 py-4 text-white">HED-003 · QuoteProof</span>
@@ -646,7 +646,7 @@ const QuoteProofExperience = () => {
               <span className="hidden sm:inline">Hedera Testnet · chain {TESTNET_CHAIN_ID}</span>
             </div>
           </div>
-          <div className="mt-7 max-w-3xl sm:mt-12">
+          <div className="mt-5 max-w-3xl sm:mt-12">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.28em] text-white/70 sm:mb-4">
               Reference quotes, made legible
             </p>
@@ -659,27 +659,22 @@ const QuoteProofExperience = () => {
             </p>
             <nav
               aria-label="Explore QuoteProof"
-              className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold sm:mt-7"
+              className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-xs font-semibold sm:mt-7 sm:gap-x-5 sm:text-sm"
             >
-              <a
-                className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
-                href="#quote-heading"
-              >
-                Try the preview
-              </a>
               {HAS_REFERENCE_REGISTRY && (
                 <a
+                  aria-label="Historical testnet receipt"
                   className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
                   href={`/?tx=${HISTORICAL_TX}`}
                 >
-                  Historical receipt
+                  Receipt
                 </a>
               )}
               <a
                 className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
                 href="/demo/index.html"
               >
-                Demo video
+                Demo
               </a>
               <a
                 className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
