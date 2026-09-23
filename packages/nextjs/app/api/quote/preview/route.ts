@@ -1,8 +1,7 @@
+import { QUOTE_PROOF_TESTNET_CHAIN_ID, getQuoteProofRegistryAddress } from "../../../../contracts/quoteProofContext";
 import { type Hex, decodeFunctionResult, encodeFunctionData } from "viem";
 
 const RPC_URL = process.env.NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL || "https://testnet.hashio.io/api";
-const REGISTRY_ADDRESS = "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709" as Hex;
-const EXPECTED_CHAIN_ID = 296n;
 const MAX_CENTS_TEXT_LENGTH = 32;
 const RPC_TIMEOUT_MS = 5_000;
 const MAX_RPC_RESPONSE_BYTES = 64 * 1024;
@@ -112,12 +111,12 @@ export async function GET(request: Request) {
       throw new Error("Reference provider returned an invalid chainId");
     }
     const chainId = BigInt(chainIdResult);
-    if (chainId !== EXPECTED_CHAIN_ID) {
-      throw new Error(`Reference provider reported chainId ${chainId}; expected ${EXPECTED_CHAIN_ID}`);
+    if (chainId !== QUOTE_PROOF_TESTNET_CHAIN_ID) {
+      throw new Error(`Reference provider reported chainId ${chainId}; expected ${QUOTE_PROOF_TESTNET_CHAIN_ID}`);
     }
 
     const data = encodeFunctionData({ abi: previewQuoteAbi, functionName: "previewQuote", args: [cents] });
-    const result = await rpcRequest<unknown>("eth_call", [{ to: REGISTRY_ADDRESS, data }, "latest"], 1);
+    const result = await rpcRequest<unknown>("eth_call", [{ to: getQuoteProofRegistryAddress(), data }, "latest"], 1);
     if (typeof result !== "string" || !/^0x[0-9a-fA-F]*$/.test(result)) {
       throw new Error("Reference provider returned an invalid call result");
     }

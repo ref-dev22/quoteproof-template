@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { GET } from "../../nextjs/app/api/quote/preview/route";
+import deployedContracts from "../../nextjs/contracts/deployedContracts";
 
 function request(cents: string): Request {
   return new Request(`http://localhost/api/quote/preview?cents=${encodeURIComponent(cents)}`);
@@ -78,6 +79,28 @@ describe("quote preview route guards", function () {
       tinybars: "1000000000",
     });
     expect(methods).to.deep.equal(["eth_chainId", "eth_call"]);
+  });
+
+  it("previews through the alternate address generated for Scaffold hooks", async function () {
+    const deployment = deployedContracts[296].QuoteProofRegistry as unknown as { address: string };
+    const originalAddress = deployment.address;
+    const alternateAddress = "0x1111111111111111111111111111111111111111";
+    deployment.address = alternateAddress;
+    try {
+      const calls: string[] = [];
+      globalThis.fetch = (async (_input, init) => {
+        const payload = JSON.parse(String(init?.body)) as { method: string; params?: [{ to?: string }] };
+        if (payload.method === "eth_call") calls.push(payload.params?.[0]?.to ?? "");
+        const result = payload.method === "eth_chainId" ? "0x128" : previewResult();
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: calls.length, result }), { status: 200 });
+      }) as typeof fetch;
+
+      const response = await GET(request("100"));
+      expect(response.status).to.equal(200);
+      expect(calls).to.deep.equal([alternateAddress]);
+    } finally {
+      deployment.address = originalAddress;
+    }
   });
 
   it("returns a provider failure without accepting an RPC error payload", async function () {

@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { FEED_ID, computeReceiptCommitment, type QuoteReceiptJson } from "../utils/quoteReceipt";
 import { POST } from "../../nextjs/app/api/quote/compare/route";
+import deployedContracts from "../../nextjs/contracts/deployedContracts";
 
 const REGISTRY = "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709";
 const ORACLE = "0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a";
@@ -148,6 +149,42 @@ describe("quote comparison route guards", function () {
     expect(methods).to.deep.equal(["eth_chainId", "eth_call", "eth_call", "eth_call", "eth_call"]);
   });
 
+  it("compares an alternate deployed registry using the address generated for Scaffold hooks", async function () {
+    const deployment = deployedContracts[296].QuoteProofRegistry as unknown as { address: string };
+    const originalAddress = deployment.address;
+    const alternateAddress = "0x1111111111111111111111111111111111111111";
+    deployment.address = alternateAddress;
+    try {
+      const receipt = { ...makeReceipt(), registry: alternateAddress };
+      receipt.commitment = computeReceiptCommitment(receipt);
+      const methods = installRpcMock(receipt);
+      const calls: string[] = [];
+      const mockedFetch = globalThis.fetch;
+      globalThis.fetch = ((input, init) => {
+        const payload = JSON.parse(String(init?.body)) as { method: string; params?: [{ to?: string }] };
+        if (payload.method === "eth_call") calls.push(payload.params?.[0]?.to ?? "");
+        return mockedFetch(input, init);
+      }) as typeof fetch;
+
+      const response = await POST(requestWithBody(JSON.stringify({ receipt })));
+      const payload = (await response.json()) as {
+        localConsistency: { status: string };
+        recordedComparison: { status: string };
+        historicalOracle: { status: string };
+        context: { registry: string };
+      };
+      expect(payload.localConsistency.status).to.equal("valid");
+      expect(payload.recordedComparison.status).to.equal("match");
+      expect(payload.historicalOracle.status).to.equal("match");
+      expect(payload.context.registry).to.equal(alternateAddress);
+      expect(methods).to.deep.equal(["eth_chainId", "eth_call", "eth_call", "eth_call", "eth_call"]);
+      expect(calls.slice(0, 2)).to.deep.equal([alternateAddress, alternateAddress]);
+      expect(calls.slice(2)).to.deep.equal([ORACLE, ORACLE]);
+    } finally {
+      deployment.address = originalAddress;
+    }
+  });
+
   it("keeps a recomputed amount forgery source-matching but ledger-mismatched", async function () {
     const original = makeReceipt();
     const forged = { ...original, cents: "200", tinybars: "2000000000" };
@@ -235,6 +272,46 @@ describe("quote comparison route guards", function () {
     expect(payload.recordedComparison.status).to.equal("match");
     expect(payload.historicalOracle.status).to.equal("unavailable");
     expect(payload.historicalOracle.error).to.equal("historical round unavailable");
+  });
+
+  it("bounds a stalled RPC request and reports a provider error", async function () {
+    this.timeout(7_000);
+    globalThis.fetch = ((_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("RPC timed out", "AbortError")), {
+          once: true,
+        });
+      })) as typeof fetch;
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: makeReceipt() })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+    };
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("provider_error");
+  });
+
+  it("bounds a chunked oversized RPC reply and reports a provider error", async function () {
+    globalThis.fetch = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(64 * 1024 + 1));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      )) as typeof fetch;
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: makeReceipt() })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string; error?: string };
+    };
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("provider_error");
+    expect(payload.recordedComparison.error).to.include("RPC response exceeds");
   });
 
   it("returns 413 for a chunked oversized wrapper before JSON parsing", async function () {

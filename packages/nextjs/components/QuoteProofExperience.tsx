@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import referenceReceipt from "../../../examples/receipt-testnet.json";
 import { useQuery } from "@tanstack/react-query";
 import { type Hash, type Hex, decodeEventLog, formatUnits, zeroAddress } from "viem";
 import { hederaTestnet } from "viem/chains";
@@ -17,13 +18,16 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
+import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
 import { canWriteQuote, friendlyWriteError } from "~~/utils/quoteWrite";
 import { getBlockExplorerTxLink } from "~~/utils/scaffold-hbar";
 
 const TESTNET_CHAIN_ID = hederaTestnet.id;
 const MAX_CENTS = 100_000_000n;
-const REGISTRY_ADDRESS = "0xa1a741aF6e0A45164e2Af6A1C35dC30275629709" as Hex;
+const REGISTRY_ADDRESS = getQuoteProofRegistryAddress();
+const HISTORICAL_TX = "0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9";
+const HAS_REFERENCE_REGISTRY = REGISTRY_ADDRESS.toLowerCase() === referenceReceipt.registry.toLowerCase();
 
 const quoteRecordedAbi = [
   {
@@ -633,25 +637,54 @@ const QuoteProofExperience = () => {
 
   return (
     <div className="flex grow flex-col bg-base-200">
-      <section className="hedera-gradient px-5 pb-16 pt-14 text-white sm:pb-20">
+      <section className="hedera-gradient px-5 pb-10 pt-6 text-white sm:pb-20 sm:pt-14">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span className="badge border-white/20 bg-white/10 py-4 text-white">HED-003 · QuoteProof</span>
             <div className="rounded-full border border-white/20 bg-black/10 px-3 py-1 text-xs font-medium">
-              Hedera Testnet · chain {TESTNET_CHAIN_ID}
+              <span className="sm:hidden">Testnet · {TESTNET_CHAIN_ID}</span>
+              <span className="hidden sm:inline">Hedera Testnet · chain {TESTNET_CHAIN_ID}</span>
             </div>
           </div>
-          <div className="mt-12 max-w-3xl">
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.28em] text-white/70">
+          <div className="mt-5 max-w-3xl sm:mt-12">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.28em] text-white/70 sm:mb-4">
               Reference quotes, made legible
             </p>
-            <h1 className="max-w-3xl text-4xl font-semibold leading-tight sm:text-6xl">
+            <h1 className="max-w-3xl text-3xl font-semibold leading-tight sm:text-6xl">
               See the quote before you write it.
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base leading-6 text-white/80 sm:mt-5 sm:text-lg sm:leading-7">
               Preview a bounded USD-to-HBAR reference from the configured Chainlink feed, then record one portable
               receipt when the wallet is ready.
             </p>
+            <nav
+              aria-label="Explore QuoteProof"
+              className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-xs font-semibold sm:mt-7 sm:gap-x-5 sm:text-sm"
+            >
+              {HAS_REFERENCE_REGISTRY && (
+                <a
+                  aria-label="Historical testnet receipt"
+                  className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
+                  href={`/?tx=${HISTORICAL_TX}`}
+                >
+                  Receipt
+                </a>
+              )}
+              <a
+                className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
+                href="/demo/index.html"
+              >
+                Demo
+              </a>
+              <a
+                className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
+                href="https://github.com/ref-dev22/quoteproof-template/pull/1"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Draft source
+              </a>
+            </nav>
           </div>
         </div>
       </section>
