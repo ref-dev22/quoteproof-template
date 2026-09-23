@@ -678,11 +678,11 @@ const QuoteProofExperience = () => {
               </a>
               <a
                 className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
-                href="https://github.com/ref-dev22/quoteproof-template/pull/1"
+                href="https://github.com/ref-dev22/quoteproof-template"
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                Draft source
+                Public source
               </a>
             </nav>
           </div>
