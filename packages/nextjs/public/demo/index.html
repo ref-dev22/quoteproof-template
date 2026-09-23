@@ -11,7 +11,7 @@
   .note { border-left: .3rem solid #2b6cb0; padding: .5rem 1rem; }
 </style>
 <h1>QuoteProof recorded demo</h1>
-<p class="note">A silent browser-page recording captured on implementation baseline <code>985f15f</code>, with its standalone evidence report. It demonstrates the read-only user journey; check the current app and repository evidence for later code revisions. The historical receipt is read-only; no wallet action or new write is part of the recording.</p>
+<p class="note">A silent, 99.44-second browser recording of the isolated public judge preview at implementation <code>f253f1a</code>. The app sequence shows the wallet-free reference, historical receipt, read-only comparison and actual JSON export. The final table is explicitly labeled historical standalone CLI evidence. No wallet connection, signing or new transaction occurs in this recording. The original production app is a separate older deployment.</p>
 <video controls preload="metadata">
   <source src="./quoteproof-demo.webm" type="video/webm">
   <track kind="captions" srclang="en" label="English" src="./recording-captions.vtt" default>
@@ -19,15 +19,16 @@
 </video>
 <p><a href="./quoteproof-demo.webm" download>Download the recording</a> · <a href="./verification-report.html">Recorded verification report</a></p>
 <details><summary>Caption transcript</summary><ol>
-  <li>Public QuoteProof app loaded with the historical transaction; no wallet action or new write is used.</li>
-  <li>Wallet-free preview shows the configured reference quote and guarded write boundary.</li>
-  <li>Historical receipt comparison is read-only and shows the stored and historical matches.</li>
-  <li>The actual Export receipt JSON action is exercised on the public page and compared with the known fixture.</li>
-  <li>Recorded standalone verification evidence, executed from actual CLI results; not QuoteProof UI.</li>
-  <li>Genuine receipt: standalone verification records valid, historical match, and stored match.</li>
-  <li>A one-tinybar tamper fails local consistency before provider comparisons run.</li>
-  <li>A recomputed amount can pass local arithmetic and historical round checks while differing from the stored commitment.</li>
-  <li>A recomputed false price fails both the historical oracle and stored commitment comparisons.</li>
-  <li>Recorded CLI evidence is historical and read-only; it is not payment, current-price, identity, or live-wallet truth.</li>
+  <li>Current public-source candidate: a read-only tour of the isolated Hedera Testnet judge preview.</li>
+  <li>Wallet-free preview reads the configured Chainlink HBAR/USD reference. No transaction is sent.</li>
+  <li>The historical testnet transaction resolves to an event-bound receipt in the public reference registry.</li>
+  <li>Read-only checks show local consistency, the exact historical oracle round, and the stored commitment match.</li>
+  <li>Export receipt JSON downloads the real historical receipt for independent verification.</li>
+  <li>Recorded standalone CLI evidence: four cases were measured earlier; this page is a labeled report, not live app UI.</li>
+  <li>Genuine receipt: valid locally, historical observation matches, and stored record matches.</li>
+  <li>A one-tinybar alteration fails local consistency before the external comparisons run.</li>
+  <li>A recomputed amount passes arithmetic and oracle checks but differs from the stored commitment.</li>
+  <li>A recomputed false price fails the historical oracle and stored commitment checks.</li>
+  <li>This historical evidence does not prove payment, identity, or a currently payable price.</li>
 </ol></details>
 <p>Reproduction docs: <a href="https://github.com/ref-dev22/quoteproof-template/blob/main/DEMO-SCRIPT.md">demo script</a> · <a href="https://github.com/ref-dev22/quoteproof-template/blob/main/docs/adversarial-evidence.md">adversarial evidence</a>. Providing the video URL in the organizer form remains a separate submission step.</p>

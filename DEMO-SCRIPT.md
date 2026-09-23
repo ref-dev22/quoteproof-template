@@ -1,21 +1,21 @@
-# QuoteProof 118-second recorded demo
+# QuoteProof 99-second recorded demo
 
-The prepared recording is a silent, captioned browser-page capture. It shows the public app and a clearly labeled recorded CLI evidence report. No wallet action, signing, or new transaction occurs; the Scaffold preview may initialize its known burner automatically, so the claim is about actions taken in the demo.
+The prepared recording is a silent, captioned browser-page capture from the isolated [public judge preview](https://quoteproof-judge-preview.vercel.app/) at implementation `f253f1a`. It shows the current app and a clearly labeled historical CLI evidence report. No wallet connection, signing or new transaction occurs. The original production app remains a separate older deployment.
 
 ## What the recording shows
 
-1. **0–13s — Open the public experience.** The historical share route is opened for the existing testnet receipt:
-   `https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
+1. **0–8s — Open the current candidate.** The isolated preview opens the historical share route for the existing testnet receipt:
+   `https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9`.
 
-2. **13–28s — Show the preview.** The wallet-free preview visibly displays the configured chain context, price, observation age, round and ceiling-to-tinybar quantity. This is a reference quote, not a payment, and preview does not write.
+2. **8–16s — Show the preview.** The wallet-free preview visibly displays the configured chain context, price, observation age, round and ceiling-to-tinybar quantity. This is a reference quote, not a payment, and preview does not write.
 
-3. **28–41s — Compare the receipt.** The read-only comparison shows `Locally consistent`, `Historical observation matches`, and `Stored commitment matches` for the genuine historical receipt. The oracle card is an exact-round read, not a comparison with today's latest price.
+3. **16–36s — Resolve and compare the receipt.** The read-only comparison shows `Locally consistent`, `Historical observation matches`, and `Stored commitment matches` for the genuine historical receipt. The oracle card is an exact-round read, not a comparison with today's latest price.
 
-4. **42–56s — Export the receipt.** The actual `Export receipt JSON` action downloads the receipt. The browser result was semantically equal to the public historical fixture.
+4. **36–48s — Export the receipt.** The actual `Export receipt JSON` action downloads the receipt. The downloaded JSON was semantically equal to the public historical fixture.
 
-5. **58–114s — Open the recorded standalone report.** The report presents the four measured CLI cases: genuine `valid/match/match`; one-tinybar tamper `invalid/not_checked/not_run`; recomputed amount `valid/match/mismatch`; and recomputed false price `valid/mismatch/mismatch`. The report is explicitly labeled as recorded standalone evidence, not QuoteProof UI.
+5. **48–99s — Open the recorded standalone report.** The unchanged report presents four earlier measured CLI cases: genuine `valid/match/match`; one-tinybar tamper `invalid/not_checked/not_run`; recomputed amount `valid/match/mismatch`; and recomputed false price `valid/mismatch/mismatch`. The report is explicitly labeled historical standalone evidence, not a live QuoteProof UI result.
 
-The recording is available through the prepared static viewer at `/demo/index.html` after the public asset update. The sanitized fixtures and result matrix are in [`docs/adversarial-evidence.md`](docs/adversarial-evidence.md).
+The recording is available through the static viewer at `/demo/index.html` on the isolated judge preview. The sanitized fixtures and result matrix are in [`docs/adversarial-evidence.md`](docs/adversarial-evidence.md). The encoded video is 99.44 seconds at 1280×900/25fps and is under the organizer's five-minute limit.
 
 ## Reproduce outside the recording
 

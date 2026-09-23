@@ -8,15 +8,15 @@ This template keeps the upstream Hardhat/Next.js structure and adds the QuotePro
 
 | Surface | Exact scope and check |
 | --- | --- |
-| Public `main` | [PR #1](https://github.com/ref-dev22/quoteproof-template/pull/1) merged the reviewed implementation. Merge revision `e9b3649` passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35893819913) and the [external scaffold/install/build/runtime gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35893916952) (38 tests). Consult [main Actions](https://github.com/ref-dev22/quoteproof-template/actions?query=branch%3Amain) for checks on later documentation revisions. |
-| [Public judge preview](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) | An isolated Vercel project, separate from the existing production app. Its deployment of the `6900b23` implementation passed six unauthenticated hosted HTTP/API checks and the historical local, oracle and stored comparisons. It is not automatically rebuilt from public `main`. |
-| [Existing production app](https://quoteproof.vercel.app) and [recorded walkthrough](https://quoteproof.vercel.app/demo/index.html) | Hosted implementation and 118.320-second video remain at the older `985f15f` baseline. Its [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059) passed. The video shows the same read-only user journey, but was **not recorded from the current public source**. |
+| Public `main` | [PR #1](https://github.com/ref-dev22/quoteproof-template/pull/1) merged the reviewed implementation. The subsequent `f253f1a` navigation correction passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35898448985) and the [external scaffold/install/build/runtime gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35898464171) (38 tests). Consult [main Actions](https://github.com/ref-dev22/quoteproof-template/actions?query=branch%3Amain) for checks on the current video/documentation revision. |
+| [Public judge preview](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) and [updated recorded walkthrough](https://quoteproof-judge-preview.vercel.app/demo/index.html) | An isolated Vercel project, separate from the existing production app. The app was rebuilt from `f253f1a`, the checked public implementation. The silent 99.44-second recording captures its real read-only journey; the four-case standalone report shown afterward remains labeled historical evidence. |
+| [Existing production app](https://quoteproof.vercel.app) | The original hosted implementation and its earlier 118.320-second video remain at the older `985f15f` baseline. Its [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059) passed. It has not been promoted to the current source. |
 
-The [testnet transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical proof for the published reference registry, not a new transaction created by this release. Release notes and checks are revision-specific; the preview and older recording have their own provenance.
+The [testnet transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical proof for the published reference registry, not a new transaction created by this release. Release notes and checks are revision-specific; the original production recording has its own older provenance.
 
 ## Try the experience
 
-Open the [public judge preview](https://quoteproof-judge-preview.vercel.app) or its [existing testnet receipt](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The [118.320-second recorded walkthrough](https://quoteproof-judge-preview.vercel.app/demo/index.html) is hosted at `/demo/index.html`; its earlier recording baseline is listed above. For your own deployment, see [hosting instructions](docs/hosting.md).
+Open the [public judge preview](https://quoteproof-judge-preview.vercel.app) or its [existing testnet receipt](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The [99.44-second recorded walkthrough](https://quoteproof-judge-preview.vercel.app/demo/index.html) is hosted at `/demo/index.html`. For your own deployment, see [hosting instructions](docs/hosting.md).
 
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
 
@@ -237,7 +237,7 @@ All are optional for the wallet-free preview unless noted.
 - `packages/nextjs/app/api/quote/preview/route.ts` — wallet-free live preview read
 - `packages/nextjs/app/api/quote/compare/route.ts` — read-only local, historical-oracle, and stored-receipt comparison
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored, historical-oracle, and expected-quote comparison helpers
-- `DEMO-SCRIPT.md` — reproducible 118-second recorded demo stages and separate CLI/adversarial checks
+- `DEMO-SCRIPT.md` — reproducible 99-second recorded demo stages and separate CLI/adversarial checks
 - `docs/adversarial-evidence.md` — sanitized four-case receipt fixtures, results and portable read-only verifier command
 - `packages/nextjs/public/demo/index.html` — static recorded-demo viewer
 - `docs/hosting.md` — Vercel monorepo settings and read-only hosted verification
