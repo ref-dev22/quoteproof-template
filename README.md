@@ -2,13 +2,13 @@
 
 QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quote inspectable before a wallet write. Enter a bounded USD amount, read the configured testnet observation, and—only when a supported wallet is ready—record an event-bound receipt. The contract records evidence; it never transfers HBAR and does not confirm a payment.
 
-The current public checkout is a reviewable local release candidate built on Scaffold-HBAR. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience.
+The current public checkout is a reviewable Scaffold-HBAR template at verified app/demo baseline `985f15f`. It keeps the upstream Hardhat/Next.js structure, adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused judge/developer experience. Later commits may update documentation only; the pinned CI and external-scaffold runs below are evidence for `985f15f`, not for every future commit.
 
-The historical [external-scaffold release workflow](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml) recorded run `35720125222` on public commit `28e48d4`: it downloaded the public template, installed it, ran 34 tests, built and started it, checked live preview and genuine/altered receipt comparisons, and exercised the optional mock-only policy workshop. Later documentation and demo assets are tracked separately. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
+The [CI workflow](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and [external-scaffold release workflow](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059) passed for the verified `985f15f` baseline, covering the reproducible install, source checks, compile, 34 tests, types, lint, build, scaffold generation and runtime/API checks. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
 
 ## Try the experience
 
-Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The prepared 118.320-second recorded walkthrough will be available at [`/demo/index.html`](https://quoteproof.vercel.app/demo/index.html) after the public asset redeploy. For your own deployment, see [hosting instructions](docs/hosting.md).
+Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The live [118.320-second recorded walkthrough](https://quoteproof.vercel.app/demo/index.html) is hosted at `/demo/index.html`. For your own deployment, see [hosting instructions](docs/hosting.md).
 
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
 
@@ -21,7 +21,7 @@ Open `http://localhost:3001`. The page shows the testnet chain, source, USD per 
 
 The page being reachable is not proof that the live reference read succeeded. Confirm the preview card has a price, round, observation age, and quantity; the card must not say `Reference unavailable`. This browser preview reads the configured testnet RPC, so it is wallet-free but not a deterministic offline test.
 
-The deployed testnet context used by this release candidate is:
+The deployed testnet context used by this verified baseline is:
 
 - Chain: Hedera Testnet, `296`
 - QuoteProofRegistry: `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`
@@ -229,14 +229,14 @@ All are optional for the wallet-free preview unless noted.
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — stored, historical-oracle, and expected-quote comparison helpers
 - `DEMO-SCRIPT.md` — reproducible 118-second recorded demo stages and separate CLI/adversarial checks
 - `docs/adversarial-evidence.md` — sanitized four-case receipt fixtures, results and portable read-only verifier command
-- `packages/nextjs/public/demo/index.html` — static recorded-demo viewer (when the recording artifact is present)
+- `packages/nextjs/public/demo/index.html` — static recorded-demo viewer
 - `docs/hosting.md` — Vercel monorepo settings and read-only hosted verification
 - `docs/local-policy-workshop.md` — disposable mock-only policy adaptation and validation
 - `LICENCE` — MIT license and upstream notice
 - `AGENTS.md` — concise contributor/build guidance for this checkout
 - `SUBMISSION-DRAFT.md` — publication target, exact external scaffold command, and release checklist
 
-AI-assisted implementation and review were used for this release candidate. The evidence is reproducible from the commands above; no private vault instructions, credentials, or private task material are part of the public template.
+AI-assisted implementation and review were used for this template. The evidence is reproducible from the commands above; no private vault instructions, credentials, or private task material are part of the public template.
 
 ## Release status
 
