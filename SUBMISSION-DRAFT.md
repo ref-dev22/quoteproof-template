@@ -6,6 +6,8 @@ QuoteProof is a Scaffold-HBAR template for Chainlink-priced USD-to-HBAR referenc
 
 Repository: https://github.com/ref-dev22/quoteproof-template
 
+**Draft status:** [PR #1](https://github.com/ref-dev22/quoteproof-template/pull/1) is under review. The verified draft implementation is `dd3138c`; public `main` is still `3092716`. This document is a reviewer packet, not a claim that the competition form has been submitted.
+
 ```bash
 npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template#main --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
 cd quoteproof
@@ -16,16 +18,21 @@ npm run next:dev -- --hostname 0.0.0.0 --port 3001
 
 The source repository has the required `template.json`; the CLI removes it from the generated project after using it. The preview needs no wallet. A testnet deployment and write are separate credentialed steps described in [README.md](README.md).
 
+To scaffold the draft before it is merged, replace `#main` above with `#fix/reviewer-retarget-and-evidence`. Verify that branch's current head and its exact-SHA Actions results before attributing the checks below to it.
+
 ## Inspect the proof without a new transaction
 
-- [Live app](https://quoteproof.vercel.app/) and [118-second captioned walkthrough](https://quoteproof.vercel.app/demo/index.html).
+- [Public app](https://quoteproof.vercel.app/) and [118-second captioned walkthrough](https://quoteproof.vercel.app/demo/index.html) show the older `985f15f` implementation baseline. The video remains a demonstration of the same visible journey, not a recording of `dd3138c`.
+- [Draft `dd3138c` hosted preview](https://quoteproof-29vjugm3t-omarrefaat11-8153.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) passed six hosted HTTP/API checks and the read-only historical comparison. It currently requires Vercel access, so it is not yet a public judge-facing URL.
 - [Historical receipt in the app](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). Use **Compare stored commitment** to see local `valid`, historical oracle `match`, and recorded commitment `match` as separate results.
 - [Transaction on HashScan](https://hashscan.io/testnet/transaction/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) and [Mirror Node result](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) (`SUCCESS`). Chain ID `296`, contract ID `0.0.10645852`, reference registry `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`.
 - [Four-case adversarial matrix](docs/adversarial-evidence.md) and [committed receipt](examples/receipt-testnet.json). The standalone verifier can run locally with explicit chain, registry, and oracle arguments; the README gives the exact command. A correctly recomputed fabricated receipt can pass local math yet fail the stored-record check.
 
 ## Reproducible release evidence
 
-The public `3092716` source/docs checkpoint passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832893645) and an [empty-directory external scaffold](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832913537) on Node 20.18.3 with CLI 0.4.0. The latter performed source-provenance comparisons, `npm ci`, compile, 34 tests, type checks, zero-warning lint, production build/start and six HTTP/API checks. The hosted app/video implementation baseline `985f15f` separately passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and its [external scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059). Each run proves only the commit named by its GitHub metadata; check the latest revision's workflow results before treating it as verified.
+Draft implementation `dd3138c` passed [exact-commit CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35850460494) and an [empty-directory external scaffold](https://github.com/ref-dev22/quoteproof-template/actions/runs/35850490860) on Node 20.18.3 with CLI 0.4.0. The latter checked source provenance, `npm ci`, compile, 38 tests, types, zero-warning lint, production build/start, workshop and six HTTP/API checks. A clean archive of the same SHA built and passed six checks on the separate Vercel preview; its historical receipt showed local, exact oracle round, and stored matches in the browser.
+
+The public `3092716` source/docs checkpoint separately passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832893645) and its [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832913537). The public app/video `985f15f` baseline passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and its [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059). These remain historical checks. Any later PR documentation or code commit needs its own head verification; the old runs cannot be relabelled as final-head results.
 
 The contract, verifier, API routes, UI, and tests are in `packages/`. The generated `deployedContracts.ts` supplies the registry address to Scaffold hooks and QuoteProof's preview, receipt UI, and comparison route after a new testnet deployment. The HBAR/USD testnet oracle remains pinned and validated by the deploy script. The historical example belongs to the published reference registry.
 

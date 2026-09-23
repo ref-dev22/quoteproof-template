@@ -2,13 +2,22 @@
 
 QuoteProof is a small Hedera dApp that makes a Chainlink HBAR/USD reference quote inspectable before a wallet write. Enter a bounded USD amount, read the configured testnet observation, and—only when a supported wallet is ready—record an event-bound receipt. The contract records evidence; it never transfers HBAR and does not confirm a payment.
 
-The hosted app and recorded demo were verified at implementation baseline `985f15f`. This template keeps the upstream Hardhat/Next.js structure and adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused developer experience. Check a run's commit SHA before applying its results to a later revision.
+This template keeps the upstream Hardhat/Next.js structure and adds the QuoteProof registry, adversarial tests, a standalone receipt verifier, and a focused developer experience. A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification.
 
-The public `3092716` source/docs checkpoint passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832893645) and the [fresh external-scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832913537), covering install, source checks, compile, 34 tests, types, lint, build, scaffold generation and runtime/API checks. The hosted `985f15f` app/demo baseline separately passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and its [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059). A [historical testnet receipt](examples/receipt-testnet.json) is included for read-only verification. These recorded runs do not establish a pass for later code changes.
+## Release and draft evidence
+
+| Surface | Exact scope and check |
+| --- | --- |
+| Current public `main` | Source/docs checkpoint `3092716` passed [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832893645) and the [fresh external-scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35832913537) (34 tests). |
+| [Draft PR #1](https://github.com/ref-dev22/quoteproof-template/pull/1) | Implementation `dd3138c` passed [exact-commit CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35850460494) and [external scaffold/install/build/runtime gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35850490860) (38 tests). The PR may gain later documentation commits; check its current head and Actions before treating those runs as final-head proof. |
+| [Draft hosted preview](https://quoteproof-29vjugm3t-omarrefaat11-8153.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) | Clean archive of `dd3138c` deployed as Vercel Preview. Six hosted read-only HTTP/API checks passed; the historical receipt displayed local, oracle and stored matches. **This URL requires Vercel access** and is not yet a public judge link. |
+| [Public app](https://quoteproof.vercel.app) and [recorded walkthrough](https://quoteproof.vercel.app/demo/index.html) | Hosted implementation and 118.320-second video remain at the older `985f15f` baseline. Its [CI](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732415654) and [external gate](https://github.com/ref-dev22/quoteproof-template/actions/runs/35732484059) passed. The video shows the same read-only user journey, but was **not recorded from the draft commit**. |
+
+The [testnet transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical proof for the published reference registry, not a new transaction created by the draft. Release notes and checks are revision-specific; no draft preview or old recording is a substitute for a public final-head check.
 
 ## Try the experience
 
-Open the [public demo](https://quoteproof.vercel.app) or the [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The live [118.320-second recorded walkthrough](https://quoteproof.vercel.app/demo/index.html) is hosted at `/demo/index.html`. For your own deployment, see [hosting instructions](docs/hosting.md).
+Open the [public app](https://quoteproof.vercel.app) or its [existing testnet receipt](https://quoteproof.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The receipt's **Compare stored commitment** action is read-only and needs no new transaction. The [118.320-second recorded walkthrough](https://quoteproof.vercel.app/demo/index.html) is hosted at `/demo/index.html`; its recording baseline is listed above. For your own deployment, see [hosting instructions](docs/hosting.md).
 
 The preview is wallet-free. A wallet, faucet funds, and a deployment are not needed to inspect the live configured reference:
 
@@ -32,7 +41,7 @@ Historical confirmed testnet proof (read-only): [QuoteProof transaction on HashS
 
 ## Create a project from the CLI
 
-The template repository is [`ref-dev22/quoteproof-template`](https://github.com/ref-dev22/quoteproof-template), branch `main`. The official CLI also supports an interactive setup:
+The template repository is [`ref-dev22/quoteproof-template`](https://github.com/ref-dev22/quoteproof-template). The `main` branch remains the current public release while PR #1 is reviewed. The official CLI also supports an interactive setup:
 
 ```bash
 npx create-scaffold-hbar@latest
@@ -45,6 +54,16 @@ npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-templ
 cd quoteproof
 npm ci
 ```
+
+To review the draft implementation before it reaches `main`, use the PR branch in the same command:
+
+```bash
+npx create-scaffold-hbar@latest quoteproof-draft --template ref-dev22/quoteproof-template#fix/reviewer-retarget-and-evidence --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
+cd quoteproof-draft
+npm ci
+```
+
+The branch can move. For reproducible evidence, compare its current commit with the [PR head](https://github.com/ref-dev22/quoteproof-template/pull/1) and use the exact-SHA CI and external gate for that head.
 
 The source `template.json` selects Next.js, Hardhat, and `npm`. `--ci` makes scaffolding non-interactive; `--skip-hedera-skills` keeps optional agent skills out of the minimal setup. `--skip-install` separates generation from the reproducible `npm ci` install, which the manifest also prints as the next step. Keep the quotes around the package-manager value: CLI 0.4.0 rewrites bare package-manager names in generated Markdown. See the [create-scaffold-hbar CLI](https://github.com/hedera-dev/create-scaffold-hbar) and its [template manifest source](https://raw.githubusercontent.com/hedera-dev/create-scaffold-hbar/main/src/types.ts).
 
