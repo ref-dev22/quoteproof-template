@@ -27,6 +27,8 @@ The creator rebuilds the receipt from the confirmed `QuoteRecorded` event and re
 npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
 ```
 
+The command above verifies the published reference receipt. After deploying your own registry, replace `--expected-registry` with the address in your generated `deployments/hederaTestnet/QuoteProofRegistry.json` and use a receipt from that deployment. Keep the expected oracle matched to the validated feed in the deploy script.
+
 Without `--allow-foreign-context`, the verifier defaults to Hedera testnet chain `296`; it may load `deployments/hederaTestnet/QuoteProofRegistry.json` when that ignored local artifact exists, but fresh source exports must use the explicit registry/oracle flags shown above. `--allow-foreign-context` is only for deliberate offline fixtures. The result always reports `onChainVerified: false`; `--compare-stored` adds direct read-only registry and historical-oracle calls without the Next.js server. The optional `--expected-commitment`, `--expected-issuer`, and `--expected-nonce` fields must come from an independent reference and report `not_supplied`, `not_checked`, `match`, or `mismatch`.
 
 ## Layout

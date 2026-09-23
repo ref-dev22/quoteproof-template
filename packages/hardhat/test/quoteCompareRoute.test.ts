@@ -274,6 +274,46 @@ describe("quote comparison route guards", function () {
     expect(payload.historicalOracle.error).to.equal("historical round unavailable");
   });
 
+  it("bounds a stalled RPC request and reports a provider error", async function () {
+    this.timeout(7_000);
+    globalThis.fetch = ((_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("RPC timed out", "AbortError")), {
+          once: true,
+        });
+      })) as typeof fetch;
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: makeReceipt() })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string };
+    };
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("provider_error");
+  });
+
+  it("bounds a chunked oversized RPC reply and reports a provider error", async function () {
+    globalThis.fetch = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(64 * 1024 + 1));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      )) as typeof fetch;
+
+    const response = await POST(requestWithBody(JSON.stringify({ receipt: makeReceipt() })));
+    const payload = (await response.json()) as {
+      localConsistency: { status: string };
+      recordedComparison: { status: string; error?: string };
+    };
+    expect(payload.localConsistency.status).to.equal("valid");
+    expect(payload.recordedComparison.status).to.equal("provider_error");
+    expect(payload.recordedComparison.error).to.include("RPC response exceeds");
+  });
+
   it("returns 413 for a chunked oversized wrapper before JSON parsing", async function () {
     const methods: string[] = [];
     globalThis.fetch = (async (_input, init) => {

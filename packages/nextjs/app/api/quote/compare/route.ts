@@ -14,6 +14,8 @@ import { type Hex, decodeFunctionResult, encodeFunctionData } from "viem";
 const RPC_URL = process.env.NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL || "https://testnet.hashio.io/api";
 const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
 const MAX_REQUEST_BYTES = 64 * 1024;
+const MAX_RPC_RESPONSE_BYTES = 64 * 1024;
+const RPC_TIMEOUT_MS = 5_000;
 
 const getCommitmentAbi = [
   {
@@ -160,22 +162,53 @@ function invalidResponse(error: string, registry: Hex): ComparisonResponse {
 }
 
 async function rpcRequest<T>(method: string, params: unknown[], id: number): Promise<T> {
-  const response = await fetch(RPC_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id,
-      method,
-      params,
-    }),
-    cache: "no-store",
-  });
-  const payload = (await response.json()) as { result?: T; error?: { message?: string } };
-  if (!response.ok || payload.error || payload.result === undefined) {
-    throw new Error(payload.error?.message || "Reference provider failed");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
+  try {
+    const response = await fetch(RPC_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > MAX_RPC_RESPONSE_BYTES) {
+      throw new Error(`RPC response exceeds ${MAX_RPC_RESPONSE_BYTES} bytes`);
+    }
+    if (!response.body) throw new Error("Reference provider returned an empty response");
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_RPC_RESPONSE_BYTES) {
+          await reader.cancel();
+          throw new Error(`RPC response exceeds ${MAX_RPC_RESPONSE_BYTES} bytes`);
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as { result?: T; error?: { message?: string } };
+    if (!response.ok || payload.error || payload.result === undefined) {
+      throw new Error(payload.error?.message || "Reference provider failed");
+    }
+    return payload.result;
+  } finally {
+    clearTimeout(timeout);
   }
-  return payload.result;
 }
 
 async function rpcCall(to: `0x${string}`, data: Hex, id: number): Promise<Hex> {
