@@ -3,9 +3,8 @@ import { BoundedBodyError, readBoundedBody } from "../../nextjs/utils/boundedBod
 import { readBoundedJson } from "../../nextjs/utils/quoteHcs";
 
 describe("HCS bounded body reader", function () {
-  it("rejects missing, non-numeric, and oversized lengths before reading", async function () {
+  it("rejects non-numeric and oversized declared lengths before reading", async function () {
     for (const [header, status] of [
-      [null, 411],
       ["many", 400],
       ["9", 413],
     ] as const) {
@@ -18,7 +17,7 @@ describe("HCS bounded body reader", function () {
         },
         { highWaterMark: 0 },
       );
-      const response = new Response(stream, { headers: header === null ? {} : { "content-length": header } });
+      const response = new Response(stream, { headers: { "content-length": header } });
       try {
         await readBoundedBody(response, 8);
         expect.fail("Expected a bounded-body rejection");
@@ -30,7 +29,7 @@ describe("HCS bounded body reader", function () {
     }
   });
 
-  it("stops a streamed body at the byte cap even when the declared length is small", async function () {
+  it("stops a streamed body at the byte cap without a declared length", async function () {
     let pulls = 0;
     const stream = new ReadableStream<Uint8Array>(
       {
@@ -41,7 +40,7 @@ describe("HCS bounded body reader", function () {
       },
       { highWaterMark: 0 },
     );
-    const response = new Response(stream, { headers: { "content-length": "1" } });
+    const response = new Response(stream);
     try {
       await readBoundedBody(response, 8);
       expect.fail("Expected the stream to be stopped at the cap");
@@ -56,12 +55,6 @@ describe("HCS bounded body reader", function () {
     const body = JSON.stringify({ result: "ok" });
     const response = new Response(body, { headers: { "content-length": String(Buffer.byteLength(body)) } });
     expect(await readBoundedJson(response)).to.deep.equal({ result: "ok" });
-    try {
-      await readBoundedJson(new Response(body));
-      expect.fail("Expected missing response length to be rejected");
-    } catch (error) {
-      expect(error).to.be.instanceOf(BoundedBodyError);
-      expect((error as BoundedBodyError).status).to.equal(411);
-    }
+    expect(await readBoundedJson(new Response(body))).to.deep.equal({ result: "ok" });
   });
 });

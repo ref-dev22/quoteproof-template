@@ -1,7 +1,7 @@
 export class BoundedBodyError extends Error {
   constructor(
     message: string,
-    readonly status: 400 | 411 | 413,
+    readonly status: 400 | 413,
   ) {
     super(message);
     this.name = "BoundedBodyError";
@@ -10,11 +10,12 @@ export class BoundedBodyError extends Error {
 
 export async function readBoundedBody(source: Request | Response, maxBytes: number): Promise<string> {
   const header = source.headers.get("content-length");
-  if (header === null) throw new BoundedBodyError("Content-Length required", 411);
-  if (!/^[0-9]+$/.test(header)) throw new BoundedBodyError("Invalid Content-Length", 400);
-  const declared = Number(header);
-  if (!Number.isSafeInteger(declared)) throw new BoundedBodyError("Invalid Content-Length", 400);
-  if (declared > maxBytes) throw new BoundedBodyError("Body too large", 413);
+  if (header !== null) {
+    if (!/^[0-9]+$/.test(header)) throw new BoundedBodyError("Invalid Content-Length", 400);
+    const declared = Number(header);
+    if (!Number.isSafeInteger(declared)) throw new BoundedBodyError("Invalid Content-Length", 400);
+    if (declared > maxBytes) throw new BoundedBodyError("Body too large", 413);
+  }
   if (!source.body) return "";
 
   const reader = source.body.getReader();

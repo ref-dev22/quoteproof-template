@@ -32,7 +32,7 @@ function mirrorResponse(data: unknown): Response {
 }
 
 describe("HCS Mirror read-back", function () {
-  it("rejects a missing Content-Length before reading Mirror", async function () {
+  it("verifies a message when the request and Mirror response omit Content-Length", async function () {
     const savedTopic = process.env.HCS_TOPIC_ID;
     const savedOperator = process.env.HCS_OPERATOR_ID;
     const originalFetch = globalThis.fetch;
@@ -42,7 +42,14 @@ describe("HCS Mirror read-back", function () {
       process.env.HCS_OPERATOR_ID = operatorId;
       globalThis.fetch = async () => {
         calls++;
-        throw new Error("Network must not be reached");
+        return new Response(
+          JSON.stringify({
+            topic_id: topicId,
+            sequence_number: sequenceNumber,
+            payer_account_id: operatorId,
+            message,
+          }),
+        );
       };
       const response = await POST(
         new Request("http://localhost/api/quote/hcs/verify", {
@@ -50,8 +57,9 @@ describe("HCS Mirror read-back", function () {
           body: JSON.stringify({ receipt, transactionHash, logIndex: 0, sequenceNumber }),
         }),
       );
-      expect(response.status).to.equal(411);
-      expect(calls).to.equal(0);
+      expect(response.status).to.equal(200);
+      expect((await response.json()).hcsAnchor.status).to.equal("match");
+      expect(calls).to.equal(1);
     } finally {
       globalThis.fetch = originalFetch;
       if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;

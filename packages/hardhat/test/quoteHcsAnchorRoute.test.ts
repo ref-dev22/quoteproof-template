@@ -170,8 +170,8 @@ describe("HCS anchor event gate", function () {
         headers: { authorization: "Bearer test-only-token" },
         body: JSON.stringify({ receipt, transactionHash }),
       });
-      expect((await POST(withoutLength)).status).to.equal(411);
-      expect(calls).to.equal(0);
+      expect((await POST(withoutLength)).status).to.equal(502);
+      expect(calls).to.equal(1);
     } finally {
       globalThis.fetch = originalFetch;
       for (const [key, value] of Object.entries(saved)) {
