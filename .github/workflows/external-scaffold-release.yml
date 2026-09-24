@@ -191,6 +191,57 @@ jobs:
           fi
           node "$GITHUB_WORKSPACE/scripts/release-smoke.mjs" 2>&1 | tee "$RELEASE_LOG_DIR/smoke.log"
 
+      - name: Smoke test README dev mode on generated scaffold
+        shell: bash
+        working-directory: ${{ env.RELEASE_ROOT }}/app
+        run: |
+          set -euo pipefail
+          unset HCS_TOPIC_ID HCS_OPERATOR_ID HCS_OPERATOR_KEY HCS_ANCHOR_TOKEN HCS_ANCHOR_DISABLED
+          test ! -e packages/nextjs/.env.local
+          dev_port="$(node -e 'const net = require("node:net"); const server = net.createServer(); server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')"
+          dev_url="http://127.0.0.1:$dev_port"
+          server_log="$RELEASE_LOG_DIR/dev-server.log"
+          setsid npm run next:dev -- --hostname 0.0.0.0 --port "$dev_port" > "$server_log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            status=$?
+            trap - EXIT
+            kill -- "-$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          ready=0
+          deadline=$((SECONDS + 300))
+          while (( SECONDS < deadline )); do
+            page_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 "$dev_url/" || true)"
+            if [[ "$page_status" == "200" ]]; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              tail -n 80 "$server_log" >&2 || true
+              printf 'README dev server exited before GET / returned 200\n' >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            tail -n 80 "$server_log" >&2 || true
+            printf 'README dev GET / did not return 200 within 5 minutes\n' >&2
+            exit 1
+          fi
+
+          preview_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$dev_url/api/quote/preview?cents=100" || true)"
+          if [[ "$preview_status" != "200" ]]; then
+            tail -n 80 "$server_log" >&2 || true
+            printf 'README dev preview returned HTTP %s; expected 200\n' "$preview_status" >&2
+            exit 1
+          fi
+          printf 'README dev GET /: 200\nREADME dev GET /api/quote/preview?cents=100: 200\n' \
+            | tee "$RELEASE_LOG_DIR/dev-smoke.log"
+
       - name: Upload selected public release logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -205,3 +256,5 @@ jobs:
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/deterministic-checks.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/production-server.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/smoke.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-server.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-smoke.log

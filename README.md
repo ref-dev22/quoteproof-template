@@ -8,6 +8,13 @@ A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera T
 2. Record an event-bound receipt with a connected Testnet wallet.
 3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
 
+## What you'll learn
+
+- Oracle provenance: record which Chainlink round a price came from so anyone can check that observation later, rather than relying on the latest price.
+- On-chain fingerprints: hash the quote fields into a commitment stored on Hedera, emit those fields in `QuoteRecorded`, and recompute the hash to check them.
+- A public audit trail with HCS: optionally anchor a receipt to a topic protected by a server-held submit key; anyone can read the message from the Mirror Node without a key.
+- Verification you can test: adversarial cases show why a well-formed JSON file is not proof on its own.
+
 ## Start here
 
 Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
@@ -90,9 +97,17 @@ npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
 
 The two workspace commands resolve the receipt path as `packages/hardhat/quoteproof-receipt.json`. Deployment regenerates `packages/nextjs/contracts/deployedContracts.ts`; restart Next.js before using the new registry. The committed historical receipt belongs to the published reference registry and does not prove a new deployment. Keep local account material in ignored environment files, never in source or browser fields. [Hosting guidance](docs/hosting.md) covers a read-only deployment.
 
+## Make it yours
+
+1. **Use a different compatible price feed.** Keep the proxy address, expected decimals and description in `packages/hardhat/deploy/03_deploy_quoteproof_registry.ts` aligned with `FEED_ID` and `EXPECTED_DESCRIPTION_HASH` in `packages/hardhat/contracts/QuoteProofRegistry.sol`, `FEED_ID` and its validation in `packages/hardhat/utils/quoteReceipt.ts`, and `QUOTE_PROOF_ORACLE_ADDRESS` in `packages/nextjs/contracts/quoteProofContext.ts`. If the pair changes from HBAR/USD, also adapt the USD-to-HBAR arithmetic and HBAR/USD labels; redeploy to regenerate `packages/nextjs/contracts/deployedContracts.ts` and restart the app. Run `npm run hardhat:test`: the constructor-guard tests in `QuoteProofRegistry.test.ts` and bound-field checks in `quoteReceipt.test.ts` catch feed-policy mismatches.
+2. **Add a receipt field, such as an order ID.** Search for `QuoteData`, `SCHEMA_VERSION`, `RECEIPT_FIELDS`, `RECEIPT_TUPLE`, `quoteRecordedAbi` and `matchesQuoteRecordedLog`; keep the Solidity struct and commitment, TypeScript parser and encoder, UI and HCS event decoders, and both JSON exporters (`packages/hardhat/scripts/createQuoteProof.ts` and `serializeReceipt` in `packages/nextjs/components/QuoteProofExperience.tsx`) in sync. Update fixtures and run `npm run hardhat:test`: the event round-trip in `QuoteProofRegistry.test.ts`, ABI-tuple test in `quoteReceipt.test.ts` and log-match test in `quoteHcsAnchorRoute.test.ts` catch schema drift.
+3. **Anchor to your own HCS topic.** Put `HCS_OPERATOR_ID` and a `0x`-prefixed ECDSA `HCS_OPERATOR_KEY` for a funded Testnet account in the ignored `packages/nextjs/.env.local`, then run `node --env-file=packages/nextjs/.env.local packages/nextjs/scripts/createHcsTopic.cjs` from the repository root to create a topic with that account's submit key. Set `HCS_TOPIC_ID` and `HCS_ANCHOR_TOKEN` in the same server environment, keeping the key and token private; without HCS configuration, the app boots with anchoring off. Run `npm run hardhat:test`: `quoteHcsAnchorRoute.test.ts` checks the operator and topic submit key, while `quoteHcsVerifyRoute.test.ts` rejects a foreign payer.
+
 ## Limits
 
 QuoteProof does not transfer HBAR or prove payment.
+
+Anchoring the same receipt twice creates two HCS messages. The verifier's trust anchor is the configured server account recorded as each message's payer; it checks that payer when reading the message back.
 
 ## Security notes
 

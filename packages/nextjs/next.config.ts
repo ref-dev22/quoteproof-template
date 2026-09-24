@@ -3,6 +3,7 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  serverExternalPackages: ["@hiero-ledger/sdk"],
   reactStrictMode: true,
   devIndicators: false,
   typescript: {
