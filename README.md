@@ -42,7 +42,18 @@ Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `
 
 ## Inspect the historical receipt
 
-Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, and the stored registry commitment separately. Exported JSON can be checked without the browser:
+Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, the stored registry commitment, and the optional HCS anchor separately. The share link carries the HCS topic and sequence outside the receipt JSON; without the two public HCS server IDs, its card says **Not configured**.
+
+To see the HCS anchor check pass locally, add these public, non-secret lines to `packages/nextjs/.env.local` and restart the dev server:
+
+```dotenv
+HCS_TOPIC_ID=0.0.10698279
+HCS_OPERATOR_ID=0.0.10696998
+```
+
+Open the historical share link above and select **Compare stored commitment**. The fourth card should show **HCS anchor matches**. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
+
+Exported JSON can be checked without the browser:
 
 ```bash
 npm run verify:quote -w @sh/hardhat -- --input ../../examples/receipt-testnet.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
@@ -111,7 +122,9 @@ Anchoring the same receipt twice creates two HCS messages. The verifier's trust 
 
 ## Security notes
 
-A 23 September audit of the inherited lockfile reported six high-severity package names in the `npm audit --omit=dev` dependency tree: `@hiero-ledger/proto`, `@hiero-ledger/sdk`, `axios`, `postcss`, `protobufjs` and `ws`. That tree also included 29 moderate findings and no critical findings at that checkpoint. The report did not establish reachability through QuoteProof's public routes, and no exploit was reproduced. Some proposed fixes involve major upgrades or compatibility work, so no unvalidated bulk `npm audit fix --force` was applied. Run `npm audit --omit=dev` against your installed lockfile and review advisories before production use. These figures describe the dated audit, not a clean bill of health for the current release.
+- `npm audit --omit=dev` reports high-severity advisories in dependencies used by the Scaffold-HBAR starter and the optional Hiero SDK integration. The installed SDK matches the latest npm release checked; npm also suggests a Next.js major upgrade, an older Hedera proto package, and a different burner-wallet version. Those proposed changes have not been validated with this template, so they were not applied.
+- QuoteProof loads the Hiero SDK for optional HCS anchoring and its operator-key checks. The anchor route requires a bearer token, validates the receipt and its on-chain event, and submits an anchor with a fixed set of fields. The audit does not establish exploitability through QuoteProof's routes. See the [dated audit](docs/security.md) for the findings and exact versions.
+- Run `npm audit --omit=dev` yourself and review the advisories before any production use.
 
 ## Repository and notices
 

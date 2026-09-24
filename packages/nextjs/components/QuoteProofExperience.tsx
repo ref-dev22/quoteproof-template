@@ -20,6 +20,15 @@ import {
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
 import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
+import {
+  HISTORICAL_HCS_REFERENCE,
+  type HcsAnchorReference,
+  type HcsAnchorViewStatus,
+  hcsAnchorStatusLabel,
+  hcsAnchorViewStatus,
+  parseHcsAnchorReference,
+  quoteSharePath,
+} from "~~/utils/quoteHcsReference";
 import { canWriteQuote, friendlyWriteError } from "~~/utils/quoteWrite";
 import { getBlockExplorerTxLink } from "~~/utils/scaffold-hbar";
 
@@ -86,6 +95,7 @@ type ReceiptProof = {
   commitment: Hex;
   quote: QuoteFields;
   blockNumber: bigint;
+  logIndex: number;
 };
 
 type StoredComparisonResponse = {
@@ -231,19 +241,30 @@ const FailureExercises = () => (
 
 const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
   const publicClient = usePublicClient({ chainId: TESTNET_CHAIN_ID });
-  const [sharedHash, setSharedHash] = useState<Hash>();
+  const [sharedLink, setSharedLink] = useState<{ hash: Hash; anchor?: HcsAnchorReference }>();
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "reverted" | "unavailable">("idle");
   const [proof, setProof] = useState<ReceiptProof>();
   const [comparison, setComparison] = useState<StoredComparisonResponse>();
   const [comparisonError, setComparisonError] = useState<string>();
+  const [hcsStatus, setHcsStatus] = useState<HcsAnchorViewStatus>("not_anchored");
   const [isComparing, setIsComparing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const activeHash = txHash ?? sharedHash;
+  const activeHash = txHash ?? sharedLink?.hash;
+  const anchorReference = txHash ? undefined : sharedLink?.anchor;
 
   useEffect(() => {
     const queryHash = new URLSearchParams(window.location.search).get("tx");
-    if (queryHash && /^0x[0-9a-fA-F]{64}$/.test(queryHash)) setSharedHash(queryHash as Hash);
+    if (queryHash && /^0x[0-9a-fA-F]{64}$/.test(queryHash)) {
+      setSharedLink({ hash: queryHash as Hash, anchor: parseHcsAnchorReference(window.location.search) });
+    }
   }, []);
+
+  useEffect(() => {
+    setProof(undefined);
+    setComparison(undefined);
+    setComparisonError(undefined);
+    setHcsStatus("not_anchored");
+  }, [activeHash]);
 
   useEffect(() => {
     if (!activeHash || !publicClient) return;
@@ -267,7 +288,12 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
         }
         const decoded = decodeEventLog({ abi: quoteRecordedAbi, data: eventLog.data, topics: eventLog.topics });
         const args = decoded.args as unknown as { commitment: Hex; quote: QuoteFields };
-        setProof({ commitment: args.commitment, quote: args.quote, blockNumber: receipt.blockNumber });
+        setProof({
+          commitment: args.commitment,
+          quote: args.quote,
+          blockNumber: receipt.blockNumber,
+          logIndex: eventLog.logIndex,
+        });
         setStatus("confirmed");
       } catch {
         if (!cancelled) {
@@ -286,7 +312,8 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
 
   if (!activeHash) return null;
 
-  const shareUrl = typeof window === "undefined" ? `/?tx=${activeHash}` : `${window.location.origin}/?tx=${activeHash}`;
+  const sharePath = quoteSharePath(activeHash, anchorReference);
+  const shareUrl = typeof window === "undefined" ? sharePath : `${window.location.origin}${sharePath}`;
   const explorerUrl = getBlockExplorerTxLink(TESTNET_CHAIN_ID, activeHash);
   const mirrorUrl = `https://testnet.mirrornode.hedera.com/api/v1/contracts/results/${activeHash}`;
 
@@ -309,18 +336,40 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
   };
 
   const compareStoredReceipt = async () => {
-    if (!proof || isComparing) return;
+    if (!proof || !activeHash || isComparing) return;
     setIsComparing(true);
+    setComparison(undefined);
     setComparisonError(undefined);
+    setHcsStatus(hcsAnchorViewStatus(anchorReference));
     try {
+      const receipt = serializeReceipt(proof);
       const response = await fetch("/api/quote/compare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ receipt: serializeReceipt(proof) }),
+        body: JSON.stringify({ receipt }),
       });
       const payload = (await response.json()) as StoredComparisonResponse;
       if (!response.ok) throw new Error("The receipt comparison request failed");
       setComparison(payload);
+      if (anchorReference) {
+        try {
+          const hcsResponse = await fetch("/api/quote/hcs/verify", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              receipt,
+              transactionHash: activeHash,
+              logIndex: proof.logIndex,
+              topicId: anchorReference.topicId,
+              sequenceNumber: anchorReference.sequenceNumber,
+            }),
+          });
+          const hcsPayload = (await hcsResponse.json()) as { hcsAnchor?: { status?: unknown } };
+          setHcsStatus(hcsAnchorViewStatus(anchorReference, hcsPayload.hcsAnchor?.status));
+        } catch {
+          setHcsStatus("unavailable");
+        }
+      }
     } catch (error) {
       setComparisonError(error instanceof Error ? error.message : "The receipt comparison request failed");
     } finally {
@@ -402,12 +451,12 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Three read-only checks
+                Four read-only checks
               </p>
               <p className="m-0 text-sm font-semibold">Compare this receipt with the stored issuer / nonce record</p>
               <p className="mt-2 text-xs leading-5 text-base-content/60">
-                The results are local consistency, the configured oracle&apos;s exact historical round, and the trusted
-                Hedera Testnet registry record. They never sign or submit a transaction.
+                The results are local consistency, the configured oracle&apos;s exact historical round, the trusted
+                Hedera Testnet registry record, and an optional HCS anchor. They never sign or submit a transaction.
               </p>
             </div>
             <button
@@ -420,7 +469,7 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
             </button>
           </div>
           {comparison ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-base-300 bg-base-100 p-3">
                 <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Local consistency</p>
                 <p className="mt-1 m-0 text-sm font-semibold">
@@ -457,6 +506,20 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
                 </p>
                 {comparison.historicalOracle.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.historicalOracle.error}</p>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
+                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">HCS anchor</p>
+                <p className="mt-1 m-0 text-sm font-semibold">{hcsAnchorStatusLabel(hcsStatus)}</p>
+                {anchorReference ? (
+                  <a
+                    className="mt-2 block text-xs leading-5 link"
+                    href={`https://testnet.mirrornode.hedera.com/api/v1/topics/${anchorReference.topicId}/messages/${anchorReference.sequenceNumber}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Topic {anchorReference.topicId} · message {anchorReference.sequenceNumber}
+                  </a>
                 ) : null}
               </div>
             </div>
@@ -665,7 +728,7 @@ const QuoteProofExperience = () => {
                 <a
                   aria-label="Historical testnet receipt"
                   className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
-                  href={`/?tx=${HISTORICAL_TX}`}
+                  href={quoteSharePath(HISTORICAL_TX, HISTORICAL_HCS_REFERENCE)}
                 >
                   Receipt
                 </a>

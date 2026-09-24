@@ -14,8 +14,18 @@ permissions:
 
 jobs:
   external-scaffold:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            timeout_minutes: 20
+          - os: windows-latest
+            timeout_minutes: 40
+          - os: macos-latest
+            timeout_minutes: 20
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     env:
       TEMPLATE_REPOSITORY: ${{ github.repository }}
       IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
@@ -37,9 +47,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RELEASE_ROOT="$RUNNER_TEMP/quoteproof-external-scaffold"
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING prepare=%ds\n" "$((SECONDS - step_started))"' EXIT
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            runner_temp_path="$(cygpath -u "$RUNNER_TEMP")"
+            source_root="$(cygpath -u "$GITHUB_WORKSPACE")"
+            github_env_path="$(cygpath -u "$GITHUB_ENV")"
+          else
+            runner_temp_path="$RUNNER_TEMP"
+            source_root="$GITHUB_WORKSPACE"
+            github_env_path="$GITHUB_ENV"
+          fi
+          RELEASE_ROOT="$runner_temp_path/quoteproof-external-scaffold"
           RELEASE_LOG_DIR="$RELEASE_ROOT/logs"
-          printf 'RELEASE_ROOT=%s\nRELEASE_LOG_DIR=%s\n' "$RELEASE_ROOT" "$RELEASE_LOG_DIR" >> "$GITHUB_ENV"
+          printf 'RELEASE_ROOT=%s\nRELEASE_LOG_DIR=%s\nSOURCE_ROOT=%s\n' \
+            "$RELEASE_ROOT" "$RELEASE_LOG_DIR" "$source_root" >> "$github_env_path"
           # The upstream CLI creates an initial local commit in the generated app.
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -56,7 +78,7 @@ jobs:
               ;;
           esac
           mkdir -p "$RELEASE_ROOT"
-          test -z "$(find "$RELEASE_ROOT" -mindepth 1 -maxdepth 1 -print -quit)"
+          test -z "$(ls -A "$RELEASE_ROOT")"
           mkdir -p "$RELEASE_LOG_DIR"
           {
             printf 'repository=%s\n' "$TEMPLATE_REPOSITORY"
@@ -67,9 +89,11 @@ jobs:
 
       - name: Scaffold from public repository with CLI 0.4.0
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold
         run: |
           set -euo pipefail
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING scaffold=%ds\n" "$((SECONDS - step_started))"' EXIT
           npx --yes create-scaffold-hbar@0.4.0 app \
             --template "$TEMPLATE_REPOSITORY#$IMPLEMENTATION_REF" \
             --frontend nextjs-app \
@@ -84,8 +108,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING provenance=%ds\n" "$((SECONDS - step_started))"' EXIT
           app="$RELEASE_ROOT/app"
-          node - "$GITHUB_WORKSPACE/package.json" "$app/package.json" <<'NODE'
+          node - "$SOURCE_ROOT/package.json" "$app/package.json" <<'NODE'
           const fs = require("node:fs");
           const normalize = value => {
             if (Array.isArray(value)) return value.map(normalize);
@@ -114,8 +140,9 @@ jobs:
             docs/local-policy-workshop.md \
             docs/local-policy-3600.patch \
             scripts/check-local-policy-workshop.mjs \
+            scripts/ci-smoke-server.mjs \
             scripts/release-smoke.mjs; do
-            cmp -- "$GITHUB_WORKSPACE/$path" "$app/$path"
+            cmp "$SOURCE_ROOT/$path" "$app/$path"
           done
           test ! -e "$app/template.json"
           printf 'Generated implementation matches the checked-out public commit for release-critical files; template.json removal is the expected CLI transform.\n' \
@@ -123,16 +150,20 @@ jobs:
 
       - name: Install generated scaffold dependencies
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}/app
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold/app
         run: |
           set -euo pipefail
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING install=%ds\n" "$((SECONDS - step_started))"' EXIT
           npm ci 2>&1 | tee "$RELEASE_LOG_DIR/npm-ci.log"
 
       - name: Compile, test, type-check, lint, and build generated scaffold
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}/app
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold/app
         run: |
           set -euo pipefail
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING deterministic_checks=%ds\n" "$((SECONDS - step_started))"' EXIT
           {
             npm run hardhat:compile
             npm run hardhat:test
@@ -145,108 +176,34 @@ jobs:
 
       - name: Exercise local mock policy workshop on generated scaffold
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}/app
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold/app
         run: |
           set -euo pipefail
+          step_started=$SECONDS
+          trap 'printf "CI_TIMING mock_workshop=%ds\n" "$((SECONDS - step_started))"' EXIT
           node scripts/check-local-policy-workshop.mjs 2>&1 | tee "$RELEASE_LOG_DIR/local-policy-workshop.log"
 
       - name: Run bounded read-only production API smoke checks
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}/app
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold/app
         env:
           RELEASE_SMOKE_BASE_URL: http://127.0.0.1:3002
         run: |
           set -euo pipefail
-          server_log="$RELEASE_LOG_DIR/production-server.log"
-          npm run next:serve -- --hostname 127.0.0.1 --port 3002 > "$server_log" 2>&1 &
-          server_pid=$!
-          cleanup() {
-            status=$?
-            trap - EXIT
-            if kill -0 "$server_pid" 2>/dev/null; then
-              kill "$server_pid" 2>/dev/null || true
-              wait "$server_pid" 2>/dev/null || true
-            fi
-            exit "$status"
-          }
-          trap cleanup EXIT
-
-          ready=0
-          deadline=$((SECONDS + 60))
-          while (( SECONDS < deadline )); do
-            if curl --fail --silent --show-error --max-time 1 "$RELEASE_SMOKE_BASE_URL/" > /dev/null; then
-              ready=1
-              break
-            fi
-            if ! kill -0 "$server_pid" 2>/dev/null; then
-              tail -n 80 "$server_log" >&2 || true
-              exit 1
-            fi
-            sleep 1
-          done
-          if [[ "$ready" -ne 1 ]]; then
-            tail -n 80 "$server_log" >&2 || true
-            printf 'production server did not become ready within 60 seconds\n' >&2
-            exit 1
-          fi
-          node "$GITHUB_WORKSPACE/scripts/release-smoke.mjs" 2>&1 | tee "$RELEASE_LOG_DIR/smoke.log"
+          node "$SOURCE_ROOT/scripts/ci-smoke-server.mjs" production
 
       - name: Smoke test README dev mode on generated scaffold
         shell: bash
-        working-directory: ${{ env.RELEASE_ROOT }}/app
+        working-directory: ${{ runner.temp }}/quoteproof-external-scaffold/app
         run: |
           set -euo pipefail
-          unset HCS_TOPIC_ID HCS_OPERATOR_ID HCS_OPERATOR_KEY HCS_ANCHOR_TOKEN HCS_ANCHOR_DISABLED
-          test ! -e packages/nextjs/.env.local
-          dev_port="$(node -e 'const net = require("node:net"); const server = net.createServer(); server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')"
-          dev_url="http://127.0.0.1:$dev_port"
-          server_log="$RELEASE_LOG_DIR/dev-server.log"
-          setsid npm run next:dev -- --hostname 0.0.0.0 --port "$dev_port" > "$server_log" 2>&1 &
-          server_pid=$!
-          cleanup() {
-            status=$?
-            trap - EXIT
-            kill -- "-$server_pid" 2>/dev/null || true
-            wait "$server_pid" 2>/dev/null || true
-            exit "$status"
-          }
-          trap cleanup EXIT
-
-          ready=0
-          deadline=$((SECONDS + 300))
-          while (( SECONDS < deadline )); do
-            page_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 "$dev_url/" || true)"
-            if [[ "$page_status" == "200" ]]; then
-              ready=1
-              break
-            fi
-            if ! kill -0 "$server_pid" 2>/dev/null; then
-              tail -n 80 "$server_log" >&2 || true
-              printf 'README dev server exited before GET / returned 200\n' >&2
-              exit 1
-            fi
-            sleep 2
-          done
-          if [[ "$ready" -ne 1 ]]; then
-            tail -n 80 "$server_log" >&2 || true
-            printf 'README dev GET / did not return 200 within 5 minutes\n' >&2
-            exit 1
-          fi
-
-          preview_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$dev_url/api/quote/preview?cents=100" || true)"
-          if [[ "$preview_status" != "200" ]]; then
-            tail -n 80 "$server_log" >&2 || true
-            printf 'README dev preview returned HTTP %s; expected 200\n' "$preview_status" >&2
-            exit 1
-          fi
-          printf 'README dev GET /: 200\nREADME dev GET /api/quote/preview?cents=100: 200\n' \
-            | tee "$RELEASE_LOG_DIR/dev-smoke.log"
+          node "$SOURCE_ROOT/scripts/ci-smoke-server.mjs" dev
 
       - name: Upload selected public release logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: external-scaffold-release-logs
+          name: external-scaffold-release-logs-${{ matrix.os }}
           if-no-files-found: ignore
           path: |
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/cli-output.log
@@ -258,3 +215,5 @@ jobs:
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/smoke.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-server.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-smoke.log
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/production-timing.json
+            ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-timing.json
