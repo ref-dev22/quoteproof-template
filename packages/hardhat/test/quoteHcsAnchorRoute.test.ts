@@ -11,11 +11,13 @@ import {
   matchesHcsOperatorMirrorAccount,
   matchesHcsTopicSubmitKey,
 } from "../../nextjs/utils/quoteHcsOperator";
-import type { QuoteReceiptJson } from "../utils/quoteReceipt";
+import { REFERENCE_MAX_AGE, computeReceiptCommitment, type QuoteReceiptJson } from "../utils/quoteReceipt";
 
-const receipt = JSON.parse(
+const historicalReceipt = JSON.parse(
   readFileSync(resolve(__dirname, "../../../examples/receipt-testnet.json"), "utf8"),
 ) as QuoteReceiptJson;
+const receipt = { ...historicalReceipt, maximumAge: REFERENCE_MAX_AGE.toString() };
+receipt.commitment = computeReceiptCommitment(receipt);
 const transactionHash = "0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9";
 
 function requestBody(body: unknown, token?: string, length?: string): Request {
