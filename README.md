@@ -8,6 +8,13 @@ A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera T
 2. Record an event-bound receipt with a connected Testnet wallet.
 3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
 
+## What you'll learn
+
+- Oracle provenance: record which Chainlink round a price came from so anyone can check that observation later, rather than relying on the latest price.
+- On-chain fingerprints: hash the quote fields into a commitment stored on Hedera, emit those fields in `QuoteRecorded`, and recompute the hash to check them.
+- A public audit trail with HCS: optionally anchor a receipt to a topic protected by a server-held submit key; anyone can read the message from the Mirror Node without a key.
+- Verification you can test: adversarial cases show why a well-formed JSON file is not proof on its own.
+
 ## Start here
 
 Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
@@ -89,6 +96,12 @@ npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
 ```
 
 The two workspace commands resolve the receipt path as `packages/hardhat/quoteproof-receipt.json`. Deployment regenerates `packages/nextjs/contracts/deployedContracts.ts`; restart Next.js before using the new registry. The committed historical receipt belongs to the published reference registry and does not prove a new deployment. Keep local account material in ignored environment files, never in source or browser fields. [Hosting guidance](docs/hosting.md) covers a read-only deployment.
+
+## Make it yours
+
+1. **Use a different compatible price feed.** Update the proxy address, expected decimals and description in `packages/hardhat/deploy/03_deploy_quoteproof_registry.ts`; update `FEED_ID` and `EXPECTED_DESCRIPTION_HASH` in `packages/hardhat/contracts/QuoteProofRegistry.sol`; update `FEED_ID` and its validation in `packages/hardhat/utils/quoteReceipt.ts`; and update `QUOTE_PROOF_ORACLE_ADDRESS` in `packages/nextjs/contracts/quoteProofContext.ts`. If the pair changes from HBAR/USD, also adapt the USD-to-HBAR calculation, UI labels and tests. Redeploy to regenerate `packages/nextjs/contracts/deployedContracts.ts`, then restart the app.
+2. **Add a receipt field, such as an order ID.** Add it to `QuoteData` in `packages/hardhat/contracts/QuoteProofRegistry.sol`; `_computeCommitment` hashes that struct. Keep the same field order in `RECEIPT_FIELDS`, `RECEIPT_TUPLE`, parsing and commitment encoding in `packages/hardhat/utils/quoteReceipt.ts`, and update the event decoding and JSON export in `packages/nextjs/components/QuoteProofExperience.tsx` and `packages/nextjs/utils/quoteHcs.ts`. Update fixtures and tests so Solidity and TypeScript compute the same fingerprint.
+3. **Anchor to your own HCS topic.** Put `HCS_OPERATOR_ID` and a `0x`-prefixed ECDSA `HCS_OPERATOR_KEY` for a funded Testnet account in the ignored `packages/nextjs/.env.local`. From the repository root, run `node --env-file=packages/nextjs/.env.local packages/nextjs/scripts/createHcsTopic.cjs`; it creates a topic with your operator's submit key. Then set `HCS_TOPIC_ID` and `HCS_ANCHOR_TOKEN` in the same server environment. Keep the key and token private. Without HCS configuration, the app boots with anchoring off.
 
 ## Limits
 
