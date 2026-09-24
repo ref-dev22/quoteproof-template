@@ -32,6 +32,58 @@ function mirrorResponse(data: unknown): Response {
 }
 
 describe("HCS Mirror read-back", function () {
+  it("reports not configured without contacting Mirror when HCS settings are absent", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    try {
+      delete process.env.HCS_TOPIC_ID;
+      delete process.env.HCS_OPERATOR_ID;
+      globalThis.fetch = async () => {
+        calls++;
+        throw new Error("Mirror should not be called");
+      };
+      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, topicId, sequenceNumber }));
+      expect(response.status).to.equal(200);
+      expect((await response.json()).hcsAnchor.status).to.equal("not_configured");
+      expect(calls).to.equal(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
+
+  it("rejects a share reference to a different topic before contacting Mirror", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    try {
+      process.env.HCS_TOPIC_ID = topicId;
+      process.env.HCS_OPERATOR_ID = operatorId;
+      globalThis.fetch = async () => {
+        calls++;
+        throw new Error("Mirror should not be called");
+      };
+      const response = await POST(
+        requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.999", sequenceNumber }),
+      );
+      expect(response.status).to.equal(200);
+      expect((await response.json()).hcsAnchor.status).to.equal("mismatch");
+      expect(calls).to.equal(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
+
   it("verifies a message when the request and Mirror response omit Content-Length", async function () {
     const savedTopic = process.env.HCS_TOPIC_ID;
     const savedOperator = process.env.HCS_OPERATOR_ID;
@@ -54,7 +106,7 @@ describe("HCS Mirror read-back", function () {
       const response = await POST(
         new Request("http://localhost/api/quote/hcs/verify", {
           method: "POST",
-          body: JSON.stringify({ receipt, transactionHash, logIndex: 0, sequenceNumber }),
+          body: JSON.stringify({ receipt, transactionHash, logIndex: 0, topicId, sequenceNumber }),
         }),
       );
       expect(response.status).to.equal(200);
@@ -134,7 +186,7 @@ describe("HCS Mirror read-back", function () {
           message,
         });
       };
-      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, sequenceNumber }));
+      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, topicId, sequenceNumber }));
       expect((await response.json()).hcsAnchor.status).to.equal("match");
       expect(urls).to.deep.equal([
         `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages/${sequenceNumber}`,

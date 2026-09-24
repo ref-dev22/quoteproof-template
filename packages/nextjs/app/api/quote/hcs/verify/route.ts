@@ -50,6 +50,9 @@ export async function POST(request: Request): Promise<Response> {
     ) {
       return result("invalid", "Invalid anchor reference", 400);
     }
+    if (body.topicId !== undefined && body.topicId !== topicId) {
+      return result("mismatch", "Anchor topic differs from configured topic");
+    }
     transactionHash = body.transactionHash;
     logIndex = Number(body.logIndex);
     sequenceNumber = Number(body.sequenceNumber);
