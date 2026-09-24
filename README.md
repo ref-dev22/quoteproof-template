@@ -1,6 +1,12 @@
 # QuoteProof — reference-quote receipts on Hedera
 
-QuoteProof is a Scaffold-HBAR template for developers who need an inspectable Chainlink HBAR/USD reference before a Hedera Testnet write. It previews a bounded USD-to-HBAR quote, then lets a connected wallet record a portable, event-bound receipt. The contract records evidence; it does not transfer HBAR or prove payment.
+A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera Testnet, and gives anyone a receipt to verify the exact Chainlink oracle round used. This Scaffold-HBAR template is for Hedera developers building auditable reference quotes before a wallet write.
+
+## How it works
+
+1. Preview a bounded USD-to-HBAR reference from the configured Chainlink feed.
+2. Record an event-bound receipt with a connected Testnet wallet.
+3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
 
 ## Start here
 
@@ -15,7 +21,9 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity; `Reference unavailable` means the live Testnet read did not succeed. The CLI removes `template.json` after using it. The public `main` branch can move; [release evidence](docs/release-evidence.md) identifies the revisions behind earlier checks.
+The flags select port 3001 and listen on all interfaces.
+
+Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity; `Reference unavailable` means the live Testnet read did not succeed.
 
 For a direct read-only check while the app is running:
 
@@ -81,6 +89,10 @@ npm run verify:quote -w @sh/hardhat -- --input ./quoteproof-receipt.json
 ```
 
 The two workspace commands resolve the receipt path as `packages/hardhat/quoteproof-receipt.json`. Deployment regenerates `packages/nextjs/contracts/deployedContracts.ts`; restart Next.js before using the new registry. The committed historical receipt belongs to the published reference registry and does not prove a new deployment. Keep local account material in ignored environment files, never in source or browser fields. [Hosting guidance](docs/hosting.md) covers a read-only deployment.
+
+## Limits
+
+QuoteProof does not transfer HBAR or prove payment.
 
 ## Security notes
 
