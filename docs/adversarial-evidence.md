@@ -9,7 +9,7 @@ This packet records a read-only standalone verifier run against the public Heder
 | [`recomputed-cents-1000.json`](../examples/adversarial/recomputed-cents-1000.json) | cents `100 → 1000`, amount and commitment recomputed | `2` | `valid` | `match` | `mismatch` |
 | [`recomputed-double-price.json`](../examples/adversarial/recomputed-double-price.json) | price doubled, amount and commitment recomputed | `2` | `valid` | `mismatch` | `mismatch` |
 
-The four results are summarized in [`adversarial-results.json`](../evidence/HED-final-demo-20260922/adversarial-results.json) and the readable static report is [`verification-report.html`](../evidence/HED-final-demo-20260922/verification-report.html). The genuine downloaded receipt was semantically equal to the repository's historical public fixture before these cases ran. The report is recorded evidence, not a live UI claim or proof of payment, current price, identity, or settlement.
+The table records the earlier four-case run; [release evidence](release-evidence.md) identifies its provenance. The genuine downloaded receipt was semantically equal to the repository's historical public fixture before these cases ran. These are recorded results, not a live UI claim or proof of payment, current price, identity, or settlement. Run the commands below to check the current public RPC yourself.
 
 Run one case from the repository root with Node.js `>=20.18.3`:
 
