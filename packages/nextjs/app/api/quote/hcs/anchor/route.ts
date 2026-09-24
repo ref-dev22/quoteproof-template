@@ -4,6 +4,7 @@ import {
   QUOTE_PROOF_TESTNET_CHAIN_ID,
   getQuoteProofRegistryAddress,
 } from "../../../../../contracts/quoteProofContext";
+import { BoundedBodyError, readBoundedBody } from "../../../../../utils/boundedBody";
 import {
   HCS_MIRROR_BASE,
   HCS_TIMEOUT_MS,
@@ -31,7 +32,8 @@ function reply(status: number, message: string, details?: Record<string, unknown
   return Response.json({ error: message, ...details }, { status });
 }
 
-function authorized(request: Request, token: string): boolean {
+function authorized(request: Request, token: string | undefined): boolean {
+  if (!token) return false;
   const supplied = request.headers.get("authorization");
   if (!supplied?.startsWith("Bearer ")) return false;
   const actual = Buffer.from(supplied.slice(7));
@@ -57,22 +59,22 @@ export async function POST(request: Request): Promise<Response> {
   const operatorKey = process.env.HCS_OPERATOR_KEY;
   const topicId = process.env.HCS_TOPIC_ID;
   const token = process.env.HCS_ANCHOR_TOKEN;
-  if (!isHederaId(operatorId) || !isHederaId(topicId) || !operatorKey || !token) {
+  if (!authorized(request, token)) return reply(401, "Anchor authorization required");
+  if (!isHederaId(operatorId) || !isHederaId(topicId) || !operatorKey) {
     return reply(503, "HCS anchoring is not configured");
   }
-  if (!authorized(request, token)) return reply(401, "Anchor authorization required");
   if (process.env.HCS_ANCHOR_DISABLED === "true") return reply(503, "HCS anchoring unavailable");
 
   let transactionHash: string;
   let receipt;
   try {
-    const raw = await request.text();
-    if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) return reply(413, "Request too large");
+    const raw = await readBoundedBody(request, MAX_BODY_BYTES);
     const body = JSON.parse(raw) as { transactionHash?: unknown; receipt?: unknown };
     if (!isTransactionHash(body.transactionHash)) return reply(400, "Invalid transaction hash");
     transactionHash = body.transactionHash;
     receipt = parseReceiptJson(JSON.stringify(body.receipt));
-  } catch {
+  } catch (error) {
+    if (error instanceof BoundedBodyError) return reply(error.status, error.message);
     return reply(400, "Invalid receipt request");
   }
 
@@ -107,12 +109,12 @@ export async function POST(request: Request): Promise<Response> {
   const anchor = makeHcsAnchor(receipt, transactionHash, logIndex);
   let client: Client | undefined;
   let stage = "load operator key";
+  let hcsTransactionId: string | undefined;
   try {
     const key = loadHcsOperatorKey(operatorKey);
     stage = "verify operator mirror";
     if (!(await checkHcsOperatorMirrorIdentity(operatorId, key))) {
-      process.env.HCS_ANCHOR_DISABLED = "true";
-      console.error("HCS anchoring disabled: operator EVM address differs from Mirror account");
+      console.error("HCS anchoring unavailable: operator public key differs from Mirror account");
       return reply(503, "HCS anchoring unavailable");
     }
     stage = "read topic mirror";
@@ -134,18 +136,29 @@ export async function POST(request: Request): Promise<Response> {
       .freezeWith(client);
     await submission.sign(key);
     const submitted = await submission.execute(client);
+    hcsTransactionId = submitted.transactionId.toString();
+    console.info("HCS anchor transaction submitted", { hcsTransactionId });
     stage = "confirm message";
     const confirmed = await submitted.getReceipt(client);
     const sequenceNumber = Number(confirmed.topicSequenceNumber?.toString());
     if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber <= 0) throw new Error("Missing HCS sequence");
-    return Response.json({ hcsAnchor: { status: "submitted", topicId, sequenceNumber, transactionHash, logIndex } });
+    return Response.json({
+      hcsAnchor: { status: "submitted", topicId, sequenceNumber, transactionHash, logIndex, hcsTransactionId },
+    });
   } catch (error) {
     console.error("HCS anchor failed", {
       stage,
+      hcsTransactionId,
       name: error instanceof Error ? error.name : "unknown",
       status: error && typeof error === "object" && "status" in error ? String(error.status) : undefined,
     });
-    return reply(502, "HCS anchor was not confirmed");
+    if (hcsTransactionId) {
+      return Response.json(
+        { hcsAnchor: { status: "pending", hcsTransactionId }, error: "HCS anchor confirmation is pending" },
+        { status: 502 },
+      );
+    }
+    return reply(502, "HCS anchor was not submitted");
   } finally {
     client?.close();
   }

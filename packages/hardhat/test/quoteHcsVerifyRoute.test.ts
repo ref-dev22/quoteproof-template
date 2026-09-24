@@ -15,7 +15,49 @@ const sequenceNumber = 7;
 const anchor = makeHcsAnchor(receipt, transactionHash, 0);
 const message = Buffer.from(JSON.stringify(anchor)).toString("base64");
 
+function requestBody(body: unknown): Request {
+  const json = JSON.stringify(body);
+  return new Request("http://localhost/api/quote/hcs/verify", {
+    method: "POST",
+    headers: { "content-length": String(Buffer.byteLength(json)) },
+    body: json,
+  });
+}
+
+function mirrorResponse(data: unknown): Response {
+  const json = JSON.stringify(data);
+  return new Response(json, { headers: { "content-length": String(Buffer.byteLength(json)) } });
+}
+
 describe("HCS Mirror read-back", function () {
+  it("rejects a missing Content-Length before reading Mirror", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    try {
+      process.env.HCS_TOPIC_ID = topicId;
+      process.env.HCS_OPERATOR_ID = operatorId;
+      globalThis.fetch = async () => {
+        calls++;
+        throw new Error("Network must not be reached");
+      };
+      const response = await POST(
+        new Request("http://localhost/api/quote/hcs/verify", {
+          method: "POST",
+          body: JSON.stringify({ receipt, transactionHash, logIndex: 0, sequenceNumber }),
+        }),
+      );
+      expect(response.status).to.equal(411);
+      expect(calls).to.equal(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
   it("matches an exact message paid by the configured server account", function () {
     expect(
       compareHcsMirrorMessage(
@@ -65,7 +107,7 @@ describe("HCS Mirror read-back", function () {
     ).to.equal("mismatch");
   });
 
-  it("uses only Mirror endpoints and rejects a topic without a submit key", async function () {
+  it("reads only the Mirror message and accepts its configured payer without a topic metadata check", async function () {
     const savedTopic = process.env.HCS_TOPIC_ID;
     const savedOperator = process.env.HCS_OPERATOR_ID;
     const originalFetch = globalThis.fetch;
@@ -75,16 +117,18 @@ describe("HCS Mirror read-back", function () {
       process.env.HCS_OPERATOR_ID = operatorId;
       globalThis.fetch = async input => {
         urls.push(String(input));
-        return Response.json({ submit_key: null });
+        return mirrorResponse({
+          topic_id: topicId,
+          sequence_number: sequenceNumber,
+          payer_account_id: operatorId,
+          message,
+        });
       };
-      const response = await POST(
-        new Request("http://localhost/api/quote/hcs/verify", {
-          method: "POST",
-          body: JSON.stringify({ receipt, transactionHash, logIndex: 0, sequenceNumber }),
-        }),
-      );
-      expect((await response.json()).hcsAnchor.status).to.equal("mismatch");
-      expect(urls).to.deep.equal([`https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}`]);
+      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, sequenceNumber }));
+      expect((await response.json()).hcsAnchor.status).to.equal("match");
+      expect(urls).to.deep.equal([
+        `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages/${sequenceNumber}`,
+      ]);
     } finally {
       globalThis.fetch = originalFetch;
       if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
@@ -104,25 +148,16 @@ describe("HCS Mirror read-back", function () {
       process.env.HCS_OPERATOR_ID = operatorId;
       globalThis.fetch = async input => {
         urls.push(String(input));
-        return Response.json(
-          urls.length === 1
-            ? { submit_key: { _type: "ECDSA_SECP256K1", key: "public" } }
-            : {
-                topic_id: topicId,
-                sequence_number: sequenceNumber,
-                payer_account_id: "0.0.999",
-                message,
-              },
-        );
+        return mirrorResponse({
+          topic_id: topicId,
+          sequence_number: sequenceNumber,
+          payer_account_id: "0.0.999",
+          message,
+        });
       };
-      const response = await POST(
-        new Request("http://localhost/api/quote/hcs/verify", {
-          method: "POST",
-          body: JSON.stringify({ receipt, transactionHash, logIndex: 0, sequenceNumber }),
-        }),
-      );
+      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, sequenceNumber }));
       expect((await response.json()).hcsAnchor.status).to.equal("mismatch");
-      expect(urls).to.have.length(2);
+      expect(urls).to.have.length(1);
       expect(urls.every(url => url.startsWith("https://testnet.mirrornode.hedera.com/api/v1/topics/"))).to.equal(true);
     } finally {
       globalThis.fetch = originalFetch;

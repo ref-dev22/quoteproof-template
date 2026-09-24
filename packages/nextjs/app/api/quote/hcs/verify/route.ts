@@ -4,6 +4,7 @@ import {
   QUOTE_PROOF_TESTNET_CHAIN_ID,
   getQuoteProofRegistryAddress,
 } from "../../../../../contracts/quoteProofContext";
+import { BoundedBodyError, readBoundedBody } from "../../../../../utils/boundedBody";
 import {
   HCS_MIRROR_BASE,
   HCS_TIMEOUT_MS,
@@ -38,8 +39,7 @@ export async function POST(request: Request): Promise<Response> {
   let logIndex: number;
   let sequenceNumber: number;
   try {
-    const raw = await request.text();
-    if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) return result("invalid", "Request too large", 413);
+    const raw = await readBoundedBody(request, MAX_BODY_BYTES);
     const body = JSON.parse(raw) as Record<string, unknown>;
     if (
       !isTransactionHash(body.transactionHash) ||
@@ -54,7 +54,8 @@ export async function POST(request: Request): Promise<Response> {
     logIndex = Number(body.logIndex);
     sequenceNumber = Number(body.sequenceNumber);
     receipt = parseReceiptJson(JSON.stringify(body.receipt));
-  } catch {
+  } catch (error) {
+    if (error instanceof BoundedBodyError) return result("invalid", error.message, error.status);
     return result("invalid", "Invalid receipt request", 400);
   }
   const local = verifyReceiptObject(receipt, {
@@ -66,10 +67,6 @@ export async function POST(request: Request): Promise<Response> {
   const expected = makeHcsAnchor(receipt, transactionHash, logIndex);
 
   try {
-    const topic = await mirror(`/topics/${topicId}`);
-    if (!topic.response.ok) return result("unavailable", "Topic metadata unavailable");
-    const topicData = topic.data as { submit_key?: unknown };
-    if (!topicData?.submit_key) return result("mismatch", "Topic has no submit key");
     const message = await mirror(`/topics/${topicId}/messages/${sequenceNumber}`);
     if (!message.response.ok) return result("unavailable", "HCS message not indexed or unavailable");
     const compared = compareHcsMirrorMessage(

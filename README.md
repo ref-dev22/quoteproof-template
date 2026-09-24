@@ -94,6 +94,8 @@ The two workspace commands resolve the receipt path as `packages/hardhat/quotepr
 
 QuoteProof does not transfer HBAR or prove payment.
 
+Anchoring the same receipt twice creates two HCS messages. The verifier's trust anchor is the configured server account recorded as each message's payer; it checks that payer when reading the message back.
+
 ## Security notes
 
 A 23 September audit of the inherited lockfile reported six high-severity package names in the `npm audit --omit=dev` dependency tree: `@hiero-ledger/proto`, `@hiero-ledger/sdk`, `axios`, `postcss`, `protobufjs` and `ws`. That tree also included 29 moderate findings and no critical findings at that checkpoint. The report did not establish reachability through QuoteProof's public routes, and no exploit was reproduced. Some proposed fixes involve major upgrades or compatibility work, so no unvalidated bulk `npm audit fix --force` was applied. Run `npm audit --omit=dev` against your installed lockfile and review advisories before production use. These figures describe the dated audit, not a clean bill of health for the current release.

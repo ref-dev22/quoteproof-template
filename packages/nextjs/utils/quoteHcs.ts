@@ -1,4 +1,5 @@
 import type { QuoteReceiptJson } from "../../hardhat/utils/quoteReceipt";
+import { readBoundedBody } from "./boundedBody";
 import { type Hex, decodeEventLog } from "viem";
 
 export const HCS_ANCHOR_VERSION = "quoteproof-hcs-v1";
@@ -174,9 +175,5 @@ export function compareHcsMirrorMessage(
 }
 
 export async function readBoundedJson(response: Response): Promise<unknown> {
-  const length = response.headers.get("content-length");
-  if (length !== null && Number(length) > HCS_MAX_RESPONSE_BYTES) throw new Error("Remote response too large");
-  const body = await response.text();
-  if (Buffer.byteLength(body, "utf8") > HCS_MAX_RESPONSE_BYTES) throw new Error("Remote response too large");
-  return JSON.parse(body) as unknown;
+  return JSON.parse(await readBoundedBody(response, HCS_MAX_RESPONSE_BYTES)) as unknown;
 }

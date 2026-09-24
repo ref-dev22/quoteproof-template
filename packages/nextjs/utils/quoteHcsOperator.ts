@@ -16,18 +16,20 @@ export function hcsOperatorEvmAddress(key: PrivateKey): string {
 
 export function matchesHcsOperatorMirrorAccount(account: unknown, operatorId: string, key: PrivateKey): boolean {
   if (!account || typeof account !== "object") return false;
-  const record = account as { account?: unknown; evm_address?: unknown; deleted?: unknown };
+  const record = account as { account?: unknown; key?: { _type?: unknown; key?: unknown }; deleted?: unknown };
   return (
     record.account === operatorId &&
     record.deleted !== true &&
-    typeof record.evm_address === "string" &&
-    record.evm_address.toLowerCase() === hcsOperatorEvmAddress(key)
+    record.key?._type === "ECDSA_SECP256K1" &&
+    typeof record.key.key === "string" &&
+    RAW_PUBLIC_KEY_RE.test(record.key.key) &&
+    record.key.key.toLowerCase() === key.publicKey.toStringRaw().toLowerCase()
   );
 }
 
 export async function checkHcsOperatorMirrorIdentity(operatorId: string, key: PrivateKey): Promise<boolean> {
   if (!isHederaId(operatorId)) return false;
-  const response = await fetch(`${HCS_MIRROR_BASE}/accounts/${operatorId}`, {
+  const response = await fetch(`${HCS_MIRROR_BASE}/accounts/${operatorId}?transactions=false`, {
     signal: AbortSignal.timeout(HCS_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error("Mirror operator metadata unavailable");

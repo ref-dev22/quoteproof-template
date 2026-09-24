@@ -4,8 +4,7 @@ export async function register(): Promise<void> {
   const operatorKey = process.env.HCS_OPERATOR_KEY;
   if (!operatorId && !operatorKey) return;
   if (!operatorId || !operatorKey) {
-    process.env.HCS_ANCHOR_DISABLED = "true";
-    console.error("HCS anchoring disabled: incomplete operator configuration");
+    console.error("HCS anchoring unavailable: incomplete operator configuration");
     return;
   }
 
@@ -15,12 +14,10 @@ export async function register(): Promise<void> {
     const key = loadHcsOperatorKey(operatorKey);
     console.info("HCS operator startup", { accountId: operatorId, evmAddress: hcsOperatorEvmAddress(key) });
     if (!(await checkHcsOperatorMirrorIdentity(operatorId, key))) {
-      process.env.HCS_ANCHOR_DISABLED = "true";
-      console.error("HCS anchoring disabled: operator EVM address differs from Mirror account");
+      console.error("HCS anchoring unavailable: operator public key differs from Mirror account");
     }
   } catch (error) {
-    process.env.HCS_ANCHOR_DISABLED = "true";
-    console.error("HCS anchoring disabled: operator identity check failed", {
+    console.error("HCS anchoring unavailable: operator identity check failed", {
       name: error instanceof Error ? error.name : "unknown",
       message: error instanceof Error ? error.message : undefined,
     });
