@@ -49,11 +49,11 @@ describe("HCS Mirror read-back", function () {
           message,
         });
       };
-      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }));
+      const response = await POST(
+        requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }),
+      );
       expect((await response.json()).hcsAnchor.status).to.equal("match");
-      expect(urls).to.deep.equal([
-        "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10698279/messages/1",
-      ]);
+      expect(urls).to.deep.equal(["https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10698279/messages/1"]);
     } finally {
       globalThis.fetch = originalFetch;
       if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
@@ -75,10 +75,22 @@ describe("HCS Mirror read-back", function () {
         calls++;
         throw new Error("Mirror should not be called");
       };
-      const request = requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 });
+      const request = requestBody({
+        receipt,
+        transactionHash,
+        logIndex: 0,
+        topicId: "0.0.10698279",
+        sequenceNumber: 1,
+      });
       expect((await (await POST(request)).json()).hcsAnchor.status).to.equal("not_configured");
       process.env.HCS_OPERATOR_ID = "0.0.888";
-      const configuredRequest = requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 });
+      const configuredRequest = requestBody({
+        receipt,
+        transactionHash,
+        logIndex: 0,
+        topicId: "0.0.10698279",
+        sequenceNumber: 1,
+      });
       expect((await (await POST(configuredRequest)).json()).hcsAnchor.status).to.equal("mismatch");
       expect(calls).to.equal(0);
     } finally {
@@ -97,13 +109,16 @@ describe("HCS Mirror read-back", function () {
     try {
       delete process.env.HCS_TOPIC_ID;
       delete process.env.HCS_OPERATOR_ID;
-      globalThis.fetch = async () => mirrorResponse({
-        topic_id: "0.0.10698279",
-        sequence_number: 1,
-        payer_account_id: "0.0.999",
-        message,
-      });
-      const response = await POST(requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }));
+      globalThis.fetch = async () =>
+        mirrorResponse({
+          topic_id: "0.0.10698279",
+          sequence_number: 1,
+          payer_account_id: "0.0.999",
+          message,
+        });
+      const response = await POST(
+        requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }),
+      );
       expect((await response.json()).hcsAnchor.status).to.equal("mismatch");
     } finally {
       globalThis.fetch = originalFetch;
