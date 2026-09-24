@@ -1,6 +1,11 @@
 # QuoteProof — reference-quote receipts on Hedera
 
+[![CI](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml/badge.svg?branch=main)](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml)
+[![External scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml/badge.svg)](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml)
+
 A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera Testnet, and gives anyone a receipt to verify the exact Chainlink oracle round used. This Scaffold-HBAR template is for Hedera developers building auditable reference quotes before a wallet write.
+
+It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. Optional HCS anchoring happens only after the receipt's on-chain event is confirmed; anyone can read the anchor back and verify it without trusting the server.
 
 ## How it works
 
@@ -19,7 +24,24 @@ A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera T
 
 Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
 
-From an empty parent directory, scaffold and start the wallet-free preview:
+From an empty parent directory, scaffold the template:
+
+```bash
+npm create scaffold-hbar@latest -- --template ref-dev22/quoteproof-template
+```
+
+The CLI asks for a project name (enter `quoteproof`), whether to install Hedera Skills (choose No for this walkthrough), and the Hedera network (choose Testnet). It then installs dependencies with npm automatically. The `--` forwards `--template` to the creator; without it, npm treats the repository as a positional argument and opens the generic starter menu.
+
+Then start the wallet-free preview:
+
+```bash
+cd quoteproof
+npm run next:dev -- --hostname 0.0.0.0 --port 3001
+```
+
+The flags select port 3001 and listen on all interfaces.
+
+For a non-interactive alternative, use the flagged creator command and install from the committed lockfile:
 
 ```bash
 npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
@@ -27,8 +49,6 @@ cd quoteproof
 npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
-
-The flags select port 3001 and listen on all interfaces.
 
 Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity; `Reference unavailable` means the live Testnet read did not succeed.
 
@@ -42,16 +62,9 @@ Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `
 
 ## Inspect the historical receipt
 
-Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, the stored registry commitment, and the optional HCS anchor separately. The share link carries the HCS topic and sequence outside the receipt JSON; without the two public HCS server IDs, its card says **Not configured**.
+Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, the stored registry commitment, and the optional HCS anchor separately. The share link carries the HCS topic and sequence outside the receipt JSON; the historical HCS check uses pinned public IDs and needs no environment settings.
 
-To see the HCS anchor check pass locally, add these public, non-secret lines to `packages/nextjs/.env.local` and restart the dev server:
-
-```dotenv
-HCS_TOPIC_ID=0.0.10698279
-HCS_OPERATOR_ID=0.0.10696998
-```
-
-Open the historical share link above and select **Compare stored commitment**. The fourth card should show **HCS anchor matches**. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
+Open the historical share link above and select **Compare stored commitment**. The fourth card should show **HCS anchor matches** when the Mirror Node is available. For your own topic, set its public `HCS_TOPIC_ID` and your operator's public `HCS_OPERATOR_ID` in `packages/nextjs/.env.local`, then restart the dev server. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
 
 Exported JSON can be checked without the browser:
 

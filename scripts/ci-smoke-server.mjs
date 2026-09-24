@@ -163,7 +163,31 @@ try {
     await preview.body?.cancel();
     log("preview", Date.now() - previewStart);
     if (preview.status !== 200) throw new Error(`README dev preview returned HTTP ${preview.status}; expected 200`);
-    const result = "README dev GET /: 200\nREADME dev GET /api/quote/preview?cents=100: 200\n";
+    const hcsStart = Date.now();
+    let hcsStatus = "unavailable";
+    try {
+      const receipt = JSON.parse(readFileSync(resolve("examples/receipt-testnet.json"), "utf8"));
+      const response = await fetch(`${baseUrl}/api/quote/hcs/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          receipt,
+          transactionHash: "0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9",
+          logIndex: 0,
+          topicId: "0.0.10698279",
+          sequenceNumber: 1,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      const data = await response.json();
+      hcsStatus = data?.hcsAnchor?.status ?? `HTTP ${response.status} without status`;
+    } catch (error) {
+      hcsStatus = `unavailable (${error instanceof Error ? error.message : String(error)})`;
+    }
+    log("hcs_verify", Date.now() - hcsStart);
+    console.log(`README dev historical HCS verify: ${hcsStatus}`);
+    if (hcsStatus === "mismatch") throw new Error("README dev historical HCS verify returned mismatch");
+    const result = `README dev GET /: 200\nREADME dev GET /api/quote/preview?cents=100: 200\nREADME dev historical HCS verify: ${hcsStatus}\n`;
     process.stdout.write(result);
     writeFileSync(resolve(logDirectory, "dev-smoke.log"), result);
   }
