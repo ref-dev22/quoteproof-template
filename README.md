@@ -7,11 +7,16 @@ A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera T
 
 It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. Optional HCS anchoring happens only after the receipt's on-chain event is confirmed; anyone can read the anchor back and verify it without trusting the server.
 
+[Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1).
+
+![Four passing read-only checks for the historical receipt in the isolated judge preview](docs/images/historical-four-checks.png)
+
 ## How it works
 
 1. Preview a bounded USD-to-HBAR reference from the configured Chainlink feed.
 2. Record an event-bound receipt with a connected Testnet wallet.
 3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
+4. Optionally anchor the receipt to an HCS topic; anyone can read it back from the Mirror Node and verify it.
 
 ## What you'll learn
 
