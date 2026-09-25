@@ -37,7 +37,7 @@ Never paste keys or encrypted keystores into chat, source, browser fields, or co
 - `packages/hardhat/utils/quoteReceipt.ts` — strict JSON parser, commitment calculation, independent arithmetic verifier, and offline-only result (`onChainVerified: false`).
 - `packages/hardhat/utils/quoteReceiptComparison.ts` — pure stored, historical-oracle, and independently supplied expected-quote comparisons.
 - `packages/hardhat/scripts/verifyQuote.ts` — standalone local verifier with optional direct read-only registry/oracle comparison; it does not require the Next.js server.
-- `packages/nextjs/components/QuoteProofExperience.tsx` — wallet-free preview, guarded wallet write, event-bound receipt, share/export UI, and read-only comparison display.
+- `packages/nextjs/components/QuoteProofExperience.tsx` — composition and quote state; `packages/nextjs/components/quoteproof/` — preview and guarded write card, event-bound receipt, share/export UI, forge controls, and read-only comparison display.
 - `packages/nextjs/app/api/quote/preview/route.ts` — server-side live reference read; no wallet-originating `from` address.
 - `packages/nextjs/app/api/quote/compare/route.ts` — bounded JSON request, offline verification, RPC `eth_chainId` check, then read-only stored-commitment and exact historical-oracle-round checks.
 - `packages/nextjs/contracts/quoteProofContext.ts` — one QuoteProof registry context sourced from generated `deployedContracts.ts` for preview, receipt UI and comparison; the fixed testnet oracle remains explicit.
