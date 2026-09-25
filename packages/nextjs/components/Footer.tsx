@@ -34,7 +34,7 @@ export const Footer = () => {
       </div>
       <div className="w-full">
         <ul className="menu menu-horizontal w-full">
-          <div className="flex justify-center items-center gap-3 text-sm w-full text-base-content/60">
+          <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-sm w-full text-base-content/60">
             <a
               href="https://github.com/ref-dev22/quoteproof-template"
               target="_blank"
