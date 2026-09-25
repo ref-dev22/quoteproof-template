@@ -137,7 +137,7 @@ export function readOnlyComparisonFailed(
   return recordedComparison.status !== "match" || historicalOracle.status !== "match";
 }
 
-async function runReadOnlyComparison(
+export async function runReadOnlyComparison(
   receipt: Parameters<typeof compareExpectedQuote>[0],
   options: VerificationOptions,
   rpcUrl: string,

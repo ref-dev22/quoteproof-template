@@ -36,6 +36,11 @@ jobs:
       - name: Run Hardhat tests
         run: npm run hardhat:test
 
+      - name: Run offline tamper demo and its test
+        run: |
+          npm run demo -- --offline
+          npm run demo:test
+
       - name: Run nextjs lint
         run: npm run next:lint -- --max-warnings=0
 

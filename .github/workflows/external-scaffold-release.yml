@@ -134,14 +134,22 @@ jobs:
             packages/hardhat/contracts/QuoteProofRegistry.sol \
             packages/hardhat/utils/quoteReceipt.ts \
             packages/hardhat/utils/quoteReceiptComparison.ts \
+            packages/hardhat/scripts/demoCases.ts \
+            packages/hardhat/scripts/verifyQuote.ts \
             packages/nextjs/app/api/quote/preview/route.ts \
             packages/nextjs/app/api/quote/compare/route.ts \
             examples/receipt-testnet.json \
+            examples/adversarial/genuine.json \
+            examples/adversarial/simple-tamper-tinybars-plus-one.json \
+            examples/adversarial/recomputed-cents-1000.json \
+            examples/adversarial/recomputed-double-price.json \
             docs/local-policy-workshop.md \
             docs/local-policy-3600.patch \
             scripts/check-local-policy-workshop.mjs \
             scripts/ci-smoke-server.mjs \
-            scripts/release-smoke.mjs; do
+            scripts/release-smoke.mjs \
+            scripts/demo.mjs \
+            scripts/demo.test.mjs; do
             cmp "$SOURCE_ROOT/$path" "$app/$path"
           done
           test ! -e "$app/template.json"
@@ -167,6 +175,8 @@ jobs:
           {
             npm run hardhat:compile
             npm run hardhat:test
+            npm run demo -- --offline
+            npm run demo:test
             npm run hardhat:check-types
             npm run hardhat:lint -- --max-warnings=0
             npm run next:check-types
