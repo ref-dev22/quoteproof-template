@@ -22,7 +22,13 @@ import {
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
 import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
-import { type CheckTone, checkTone, shareAutoComparisonKey } from "~~/utils/quoteCheckVisual";
+import {
+  type CheckTone,
+  checkTone,
+  previewDisplayState,
+  shareAutoComparisonKey,
+  showShareCheckPlaceholders,
+} from "~~/utils/quoteCheckVisual";
 import {
   HISTORICAL_HCS_REFERENCE,
   type HcsAnchorReference,
@@ -294,6 +300,13 @@ const ReceiptProofCard = ({
   const activeHash = requestedReceipt?.hash ?? txHash ?? sharedLink?.hash;
   const anchorReference = requestedReceipt?.anchor ?? (txHash ? undefined : sharedLink?.anchor);
   const shareHash = requestedReceipt?.hash ?? (txHash ? undefined : sharedLink?.hash);
+  const showCheckingCards = showShareCheckPlaceholders({
+    isShared: Boolean(shareHash),
+    isComparing,
+    hasResults: Boolean(comparison),
+    hasError: Boolean(comparisonError),
+    isReverted: status === "reverted",
+  });
 
   useEffect(() => {
     const queryHash = new URLSearchParams(window.location.search).get("tx");
@@ -502,7 +515,7 @@ const ReceiptProofCard = ({
         </div>
       ) : null}
 
-      {proof ? (
+      {proof || (shareHash && status !== "reverted") ? (
         <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -514,17 +527,27 @@ const ReceiptProofCard = ({
                 The results are local consistency, the configured oracle&apos;s exact historical round, the trusted
                 Hedera Testnet registry record, and an optional HCS anchor. They never sign or submit a transaction.
               </p>
+              <p className="mt-2 text-xs leading-5 text-base-content/60">
+                Anyone reads anchors from the public Mirror Node; the trust anchor is the operator account that pays for
+                each anchor message.
+              </p>
             </div>
             <button
               type="button"
               className="btn btn-sm btn-primary"
               onClick={() => void compareStoredReceipt()}
-              disabled={isComparing}
+              disabled={!proof || isComparing}
             >
               {isComparing ? "Comparing…" : "Compare stored commitment"}
             </button>
           </div>
-          {comparison ? (
+          {showCheckingCards ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="status">
+              {["Local consistency", "Recorded state", "Historical oracle", "HCS anchor"].map(label => (
+                <CheckResultCard key={label} label={label} text="Running checks…" tone="neutral" />
+              ))}
+            </div>
+          ) : comparison ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <CheckResultCard
                 label="Local consistency"
@@ -626,7 +649,7 @@ const QuoteProofExperience = () => {
   const cents = useMemo(() => parseUsdToCents(usdInput), [usdInput]);
   const {
     data: previewData,
-    isLoading: isPreviewLoading,
+    isFetched: hasPreviewFetched,
     error: previewError,
     refetch: refetchPreview,
   } = useQuery({
@@ -693,9 +716,16 @@ const QuoteProofExperience = () => {
   const maxAge = typeof maxAgeData === "bigint" ? maxAgeData : undefined;
   const observedAge = preview ? BigInt(nowSeconds) - preview[4] : undefined;
   const isFresh = observedAge !== undefined && observedAge >= 0n && (!maxAge || observedAge <= maxAge);
+  const previewState = previewDisplayState({
+    hasValidAmount: cents !== undefined,
+    hasFetched: hasPreviewFetched,
+    hasPreview: Boolean(preview),
+    hasError: Boolean(previewError),
+    isFresh,
+  });
   const wrongNetwork = isConnected && chainId !== TESTNET_CHAIN_ID;
   const canWrite = canWriteQuote({
-    hasPreview: Boolean(preview),
+    hasPreview: previewState === "ready",
     hasCents: cents !== undefined,
     isConnected,
     hasNonce: typeof nonceData === "bigint",
@@ -740,7 +770,7 @@ const QuoteProofExperience = () => {
   const recordQuote = async () => {
     if (
       !canWriteQuote({
-        hasPreview: Boolean(preview),
+        hasPreview: previewState === "ready",
         hasCents: cents !== undefined,
         isConnected,
         hasNonce: typeof nonceData === "bigint",
@@ -768,8 +798,6 @@ const QuoteProofExperience = () => {
       setWriteError(true);
     }
   };
-
-  const previewUnavailable = !cents || !preview || Boolean(previewError);
 
   return (
     <div className="flex grow flex-col bg-base-200">
@@ -871,8 +899,14 @@ const QuoteProofExperience = () => {
                   <p className="mt-2 text-3xl font-semibold">{preview ? formatPrice(preview[2], preview[3]) : "—"}</p>
                   <p className="m-0 text-sm text-base-content/60">USD per HBAR</p>
                 </div>
-                <div className={`badge ${isFresh ? "badge-success" : "badge-warning"} py-3`}>
-                  {isFresh ? "Within policy" : "Checking"}
+                <div className={`badge ${previewState === "ready" ? "badge-success" : "badge-warning"} py-3`}>
+                  {previewState === "ready"
+                    ? "Within policy"
+                    : previewState === "stale"
+                      ? "Stale"
+                      : previewState === "unavailable"
+                        ? "Unavailable"
+                        : "Checking"}
                 </div>
               </div>
               <div className="mt-6 space-y-3">
@@ -902,12 +936,16 @@ const QuoteProofExperience = () => {
                   {oracleData ? String(oracleData) : "Loading"}
                 </p>
               </div>
-              {previewUnavailable ? (
+              {previewState === "loading" ? (
+                <div role="status" className="mt-5 rounded-xl border border-base-300 bg-base-100 p-3 text-sm">
+                  Loading reference…
+                </div>
+              ) : previewState !== "ready" ? (
                 <div role="status" className="mt-5 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm">
-                  {cents
+                  {previewState !== "invalid_amount"
                     ? "Reference unavailable or stale. Refresh after the feed has a valid observation."
                     : "Enter a valid USD amount to load the reference."}
-                  {cents ? (
+                  {previewState !== "invalid_amount" ? (
                     <button className="link ml-1 font-semibold" onClick={() => void refetchPreview()} type="button">
                       Refresh
                     </button>
@@ -954,11 +992,6 @@ const QuoteProofExperience = () => {
                 ) : null}
               </div>
             </div>
-            {isPreviewLoading ? (
-              <p role="status" className="mt-4 text-sm text-base-content/60">
-                Reading the configured reference feed…
-              </p>
-            ) : null}
             {writeMessage ? (
               <p
                 role={writeError ? "alert" : "status"}
