@@ -32,6 +32,103 @@ function mirrorResponse(data: unknown): Response {
 }
 
 describe("HCS Mirror read-back", function () {
+  it("uses pinned public IDs for the historical topic with no HCS environment", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    const urls: string[] = [];
+    try {
+      delete process.env.HCS_TOPIC_ID;
+      delete process.env.HCS_OPERATOR_ID;
+      globalThis.fetch = async input => {
+        urls.push(String(input));
+        return mirrorResponse({
+          topic_id: "0.0.10698279",
+          sequence_number: 1,
+          payer_account_id: "0.0.10696998",
+          message,
+        });
+      };
+      const response = await POST(
+        requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }),
+      );
+      expect((await response.json()).hcsAnchor.status).to.equal("match");
+      expect(urls).to.deep.equal(["https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10698279/messages/1"]);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
+
+  it("does not use historical defaults when either environment setting is present", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    try {
+      process.env.HCS_TOPIC_ID = "0.0.999";
+      delete process.env.HCS_OPERATOR_ID;
+      globalThis.fetch = async () => {
+        calls++;
+        throw new Error("Mirror should not be called");
+      };
+      const request = requestBody({
+        receipt,
+        transactionHash,
+        logIndex: 0,
+        topicId: "0.0.10698279",
+        sequenceNumber: 1,
+      });
+      expect((await (await POST(request)).json()).hcsAnchor.status).to.equal("not_configured");
+      process.env.HCS_OPERATOR_ID = "0.0.888";
+      const configuredRequest = requestBody({
+        receipt,
+        transactionHash,
+        logIndex: 0,
+        topicId: "0.0.10698279",
+        sequenceNumber: 1,
+      });
+      expect((await (await POST(configuredRequest)).json()).hcsAnchor.status).to.equal("mismatch");
+      expect(calls).to.equal(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
+
+  it("rejects a foreign payer under the pinned historical fallback", async function () {
+    const savedTopic = process.env.HCS_TOPIC_ID;
+    const savedOperator = process.env.HCS_OPERATOR_ID;
+    const originalFetch = globalThis.fetch;
+    try {
+      delete process.env.HCS_TOPIC_ID;
+      delete process.env.HCS_OPERATOR_ID;
+      globalThis.fetch = async () =>
+        mirrorResponse({
+          topic_id: "0.0.10698279",
+          sequence_number: 1,
+          payer_account_id: "0.0.999",
+          message,
+        });
+      const response = await POST(
+        requestBody({ receipt, transactionHash, logIndex: 0, topicId: "0.0.10698279", sequenceNumber: 1 }),
+      );
+      expect((await response.json()).hcsAnchor.status).to.equal("mismatch");
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (savedTopic === undefined) delete process.env.HCS_TOPIC_ID;
+      else process.env.HCS_TOPIC_ID = savedTopic;
+      if (savedOperator === undefined) delete process.env.HCS_OPERATOR_ID;
+      else process.env.HCS_OPERATOR_ID = savedOperator;
+    }
+  });
+
   it("reports not configured without contacting Mirror when HCS settings are absent", async function () {
     const savedTopic = process.env.HCS_TOPIC_ID;
     const savedOperator = process.env.HCS_OPERATOR_ID;

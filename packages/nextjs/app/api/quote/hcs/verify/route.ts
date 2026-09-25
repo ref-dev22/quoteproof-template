@@ -15,9 +15,11 @@ import {
   makeHcsAnchor,
   readBoundedJson,
 } from "../../../../../utils/quoteHcs";
+import { HISTORICAL_HCS_REFERENCE } from "../../../../../utils/quoteHcsReference";
 
 export const dynamic = "force-dynamic";
 const MAX_BODY_BYTES = 64 * 1024;
+const HISTORICAL_HCS_OPERATOR_ID = "0.0.10696998";
 
 function result(status: string, reason?: string, httpStatus = 200): Response {
   return Response.json({ hcsAnchor: { status, ...(reason ? { reason } : {}) } }, { status: httpStatus });
@@ -30,10 +32,8 @@ async function mirror(path: string): Promise<{ response: Response; data?: unknow
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const topicId = process.env.HCS_TOPIC_ID;
-  const operatorId = process.env.HCS_OPERATOR_ID;
-  if (!isHederaId(topicId) || !isHederaId(operatorId)) return result("not_configured");
-
+  let topicId: string;
+  let operatorId: string;
   let receipt;
   let transactionHash: string;
   let logIndex: number;
@@ -49,6 +49,21 @@ export async function POST(request: Request): Promise<Response> {
       Number(body.sequenceNumber) <= 0
     ) {
       return result("invalid", "Invalid anchor reference", 400);
+    }
+    const configuredTopic = process.env.HCS_TOPIC_ID;
+    const configuredOperator = process.env.HCS_OPERATOR_ID;
+    if (
+      configuredTopic === undefined &&
+      configuredOperator === undefined &&
+      body.topicId === HISTORICAL_HCS_REFERENCE.topicId
+    ) {
+      topicId = HISTORICAL_HCS_REFERENCE.topicId;
+      operatorId = HISTORICAL_HCS_OPERATOR_ID;
+    } else if (isHederaId(configuredTopic) && isHederaId(configuredOperator)) {
+      topicId = configuredTopic;
+      operatorId = configuredOperator;
+    } else {
+      return result("not_configured");
     }
     if (body.topicId !== undefined && body.topicId !== topicId) {
       return result("mismatch", "Anchor topic differs from configured topic");
