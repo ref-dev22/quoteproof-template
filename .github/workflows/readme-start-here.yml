@@ -31,7 +31,7 @@ jobs:
       - name: Run the first Start here bash block verbatim
         run: bash scripts/ci-readme-start-here.sh normal
 
-  readme-start-here-rate-limited:
+  readme-start-here-manifest-unavailable:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -41,5 +41,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.18.3
-      - name: Exhaust anonymous GitHub core quota and run the README command
-        run: bash scripts/ci-readme-start-here.sh rate-limited
+      - name: Simulate an unavailable GitHub manifest and run the README command
+        run: bash scripts/ci-readme-start-here.sh manifest-unavailable
