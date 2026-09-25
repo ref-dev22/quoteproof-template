@@ -168,7 +168,7 @@ The two workspace commands resolve the receipt path as `packages/hardhat/quotepr
 ## Make it yours
 
 1. **Use a different compatible price feed.** Keep the proxy address, expected decimals and description in `packages/hardhat/deploy/03_deploy_quoteproof_registry.ts` aligned with `FEED_ID` and `EXPECTED_DESCRIPTION_HASH` in `packages/hardhat/contracts/QuoteProofRegistry.sol`, `FEED_ID` and its validation in `packages/hardhat/utils/quoteReceipt.ts`, and `QUOTE_PROOF_ORACLE_ADDRESS` in `packages/nextjs/contracts/quoteProofContext.ts`. If the pair changes from HBAR/USD, also adapt the USD-to-HBAR arithmetic and HBAR/USD labels; redeploy to regenerate `packages/nextjs/contracts/deployedContracts.ts` and restart the app. Run `npm run hardhat:test`: the constructor-guard tests in `QuoteProofRegistry.test.ts` and bound-field checks in `quoteReceipt.test.ts` catch feed-policy mismatches.
-2. **Add a receipt field, such as an order ID.** Search for `QuoteData`, `SCHEMA_VERSION`, `RECEIPT_FIELDS`, `RECEIPT_TUPLE`, `quoteRecordedAbi` and `matchesQuoteRecordedLog`; keep the Solidity struct and commitment, TypeScript parser and encoder, UI and HCS event decoders, and both JSON exporters (`packages/hardhat/scripts/createQuoteProof.ts` and `serializeReceipt` in `packages/nextjs/components/QuoteProofExperience.tsx`) in sync. Update fixtures and run `npm run hardhat:test`: the event round-trip in `QuoteProofRegistry.test.ts`, ABI-tuple test in `quoteReceipt.test.ts` and log-match test in `quoteHcsAnchorRoute.test.ts` catch schema drift.
+2. **Add a receipt field, such as an order ID.** Search for `QuoteData`, `SCHEMA_VERSION`, `RECEIPT_FIELDS`, `RECEIPT_TUPLE`, `quoteRecordedAbi` and `matchesQuoteRecordedLog`; keep the Solidity struct and commitment, TypeScript parser and encoder, UI and HCS event decoders, and both JSON exporters (`packages/hardhat/scripts/createQuoteProof.ts` and `serializeReceipt` in `packages/nextjs/components/quoteproof/model.ts`) in sync. Update fixtures and run `npm run hardhat:test`: the event round-trip in `QuoteProofRegistry.test.ts`, ABI-tuple test in `quoteReceipt.test.ts` and log-match test in `quoteHcsAnchorRoute.test.ts` catch schema drift.
 3. **Anchor to your own HCS topic.** Put `HCS_OPERATOR_ID` and a `0x`-prefixed ECDSA `HCS_OPERATOR_KEY` for a funded Testnet account in the ignored `packages/nextjs/.env.local`, then run `node --env-file=packages/nextjs/.env.local packages/nextjs/scripts/createHcsTopic.cjs` from the repository root to create a topic with that account's submit key. Set `HCS_TOPIC_ID` and `HCS_ANCHOR_TOKEN` in the same server environment, keeping the key and token private; without HCS configuration, the app boots with anchoring off. Run `npm run hardhat:test`: `quoteHcsAnchorRoute.test.ts` checks the operator and topic submit key, while `quoteHcsVerifyRoute.test.ts` rejects a foreign payer.
 
 ## Limits
@@ -187,7 +187,8 @@ Anchoring the same receipt twice creates two HCS messages. The verifier's trust 
 
 - `packages/hardhat/contracts/QuoteProofRegistry.sol`: registry, policy and event.
 - `packages/hardhat/scripts/verifyQuote.ts`: standalone receipt verifier.
-- `packages/nextjs/components/QuoteProofExperience.tsx`: preview, guarded wallet write, share/export and comparison UI.
+- `packages/nextjs/components/QuoteProofExperience.tsx`: composes the preview, receipt and supporting sections.
+- `packages/nextjs/components/quoteproof/`: preview and guarded write card, event-bound receipt, share/export, forge controls and comparison cards.
 - `packages/nextjs/app/api/quote/preview/route.ts` and `compare/route.ts`: read-only API paths.
 - `docs/release-evidence.md`: revision-specific historical checks and hosted-preview provenance.
 - `LICENSE`: MIT license and upstream notice.
