@@ -43,6 +43,7 @@ import {
   HISTORICAL_HCS_REFERENCE,
   type HcsAnchorReference,
   type HcsAnchorViewStatus,
+  displayedHcsAnchorStatus,
   hcsAnchorStatusLabel,
   hcsAnchorViewStatus,
   parseHcsAnchorReference,
@@ -322,6 +323,9 @@ const ReceiptProofCard = ({
       hasError: Boolean(comparisonError),
       isReverted: status === "reverted",
     });
+  const displayedHcsStatus = comparison
+    ? displayedHcsAnchorStatus(comparison.localConsistency.status, hcsStatus)
+    : hcsStatus;
 
   useEffect(() => {
     const queryHash = new URLSearchParams(window.location.search).get("tx");
@@ -637,7 +641,11 @@ const ReceiptProofCard = ({
                   </p>
                 ) : null}
               </CheckResultCard>
-              <CheckResultCard label="HCS anchor" text={hcsAnchorStatusLabel(hcsStatus)} tone={checkTone(hcsStatus)}>
+              <CheckResultCard
+                label="HCS anchor"
+                text={hcsAnchorStatusLabel(displayedHcsStatus)}
+                tone={checkTone(displayedHcsStatus)}
+              >
                 {checkAnchorReference ? (
                   <a
                     className="mt-2 block text-xs leading-5 link"
@@ -648,9 +656,9 @@ const ReceiptProofCard = ({
                     Topic {checkAnchorReference.topicId} · message {checkAnchorReference.sequenceNumber}
                   </a>
                 ) : null}
-                {forgeRun.caseId && forgeCheckExplanation("hcs", hcsStatus) ? (
+                {forgeRun.caseId && forgeCheckExplanation("hcs", displayedHcsStatus) ? (
                   <p className="mt-2 text-xs leading-5 text-base-content/80">
-                    {forgeCheckExplanation("hcs", hcsStatus)}
+                    {forgeCheckExplanation("hcs", displayedHcsStatus)}
                   </p>
                 ) : null}
               </CheckResultCard>
@@ -666,14 +674,14 @@ const ReceiptProofCard = ({
                 Try to forge this receipt
               </h3>
               <p className="mt-2 text-sm text-base-content/80">
-                Simulation: uses a prepared forged copy in your browser. Nothing is written to Hedera.
+                Simulation: runs a prepared forged copy through the same read-only checks. Nothing is written to Hedera.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {FORGE_CASES.map(item => (
                   <button
                     key={item.id}
                     type="button"
-                    className={`btn btn-sm ${forgeRun.caseId === item.id ? "btn-error" : "btn-outline"}`}
+                    className={`btn btn-sm h-auto min-w-0 max-w-full whitespace-normal break-words py-2 text-left leading-snug ${forgeRun.caseId === item.id ? "btn-error" : "btn-outline"}`}
                     onClick={() => void compareStoredReceipt(item.id)}
                     disabled={isComparing}
                   >

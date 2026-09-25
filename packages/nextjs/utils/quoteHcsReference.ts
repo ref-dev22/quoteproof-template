@@ -1,13 +1,7 @@
 export type HcsAnchorReference = { topicId: string; sequenceNumber: number };
 
 export type HcsAnchorViewStatus =
-  | "not_anchored"
-  | "checking"
-  | "not_configured"
-  | "match"
-  | "mismatch"
-  | "unavailable"
-  | "invalid";
+  "not_anchored" | "not_checked" | "checking" | "not_configured" | "match" | "mismatch" | "unavailable" | "invalid";
 
 const TOPIC_ID_RE = /^0\.0\.[1-9][0-9]*$/;
 const SEQUENCE_RE = /^[1-9][0-9]*$/;
@@ -51,9 +45,17 @@ export function hcsAnchorViewStatus(reference?: HcsAnchorReference, resultStatus
   return "unavailable";
 }
 
+export function displayedHcsAnchorStatus(
+  localConsistencyStatus: string,
+  hcsStatus: HcsAnchorViewStatus,
+): HcsAnchorViewStatus {
+  return localConsistencyStatus === "valid" ? hcsStatus : "not_checked";
+}
+
 export function hcsAnchorStatusLabel(status: HcsAnchorViewStatus): string {
   return {
     not_anchored: "Not anchored",
+    not_checked: "Not checked",
     checking: "Checking HCS anchor…",
     not_configured: "Not configured",
     match: "HCS anchor matches",

@@ -8,6 +8,7 @@ import {
 } from "../utils/quoteReceiptComparison";
 import { makeHcsAnchor } from "../../nextjs/utils/quoteHcs";
 import { checkTone } from "../../nextjs/utils/quoteCheckVisual";
+import { displayedHcsAnchorStatus, hcsAnchorStatusLabel } from "../../nextjs/utils/quoteHcsReference";
 import {
   FORGE_CASES,
   forgeCheckExplanation,
@@ -70,6 +71,34 @@ describe("historical receipt forge simulation", function () {
     expect(compareStoredCommitment(price.commitment, genuine.commitment).status).to.equal("mismatch");
     expect(compareHistoricalOracle(price, observation).status).to.equal("mismatch");
     expect(makeHcsAnchor(price, transactionHash, 0)).not.to.deep.equal(makeHcsAnchor(genuine, transactionHash, 0));
+  });
+
+  it("keeps the HCS check neutral when a forged receipt fails local consistency", function () {
+    const displayedTones = (local: string, stored: string, oracle: string, hcs: "invalid" | "mismatch") => [
+      checkTone(local),
+      checkTone(stored),
+      checkTone(oracle),
+      checkTone(displayedHcsAnchorStatus(local, hcs)),
+    ];
+    expect(displayedTones("invalid", "not_run", "not_checked", "invalid")).to.deep.equal([
+      "error",
+      "neutral",
+      "neutral",
+      "neutral",
+    ]);
+    expect(hcsAnchorStatusLabel(displayedHcsAnchorStatus("invalid", "invalid"))).to.equal("Not checked");
+    expect(displayedTones("valid", "mismatch", "match", "mismatch")).to.deep.equal([
+      "success",
+      "error",
+      "success",
+      "error",
+    ]);
+    expect(displayedTones("valid", "mismatch", "mismatch", "mismatch")).to.deep.equal([
+      "success",
+      "error",
+      "error",
+      "error",
+    ]);
   });
 
   it("distinguishes idle, running, forged, restored, and network-error states", function () {
