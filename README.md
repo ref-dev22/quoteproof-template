@@ -5,7 +5,7 @@
 
 A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera Testnet, and gives anyone a receipt to verify the exact Chainlink oracle round used. This Scaffold-HBAR template is for Hedera developers building auditable reference quotes before a wallet write.
 
-It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. Optional HCS anchoring happens only after the receipt's on-chain event is confirmed; anyone can read the anchor back and verify it without trusting the server.
+It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. Optional HCS anchoring happens only after the receipt's on-chain event is confirmed. Anyone reads anchors from the public Mirror Node; the trust anchor is the operator account that pays for each anchor message.
 
 [Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1).
 
@@ -41,7 +41,7 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity; `Reference unavailable` means the live Testnet read did not succeed.
+Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity. `Loading reference…` appears during the first fetch; `Reference unavailable or stale` appears after a failed fetch or stale observation.
 
 For a direct read-only check while the app is running:
 
@@ -67,6 +67,17 @@ flowchart LR
   G --> V
 ```
 
+## Where the pattern lives
+
+- [Registry contract](packages/hardhat/contracts/QuoteProofRegistry.sol): bounds the quote and stores its commitment.
+- [Receipt and commitment code](packages/hardhat/utils/quoteReceipt.ts): parses receipts and recomputes their fingerprint.
+- [Receipt comparison](packages/hardhat/utils/quoteReceiptComparison.ts): compares issued, oracle and stored values.
+- [Preview route](packages/nextjs/app/api/quote/preview/route.ts): reads a wallet-free reference.
+- [Compare route](packages/nextjs/app/api/quote/compare/route.ts): runs the read-only receipt checks.
+- [HCS verify route](packages/nextjs/app/api/quote/hcs/verify/route.ts): reads a topic message through the Mirror Node.
+- [HCS anchor route](packages/nextjs/app/api/quote/hcs/anchor/route.ts): submits after confirming the recorded event.
+- [Tamper demo](scripts/demo.mjs): runs the genuine and altered receipt cases.
+
 ## Live evidence
 
 | Item | Hedera Testnet evidence |
@@ -88,7 +99,7 @@ flowchart LR
 - The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
 - The receipt records the exact oracle round so verification compares the historical observation used at recording time, not a later price.
 - The server anchors to HCS only after it confirms a successful transaction with one matching `QuoteRecorded` event, avoiding an anchor for an unconfirmed receipt.
-- A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message through the Mirror Node without trusting a server response.
+- A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message. Anyone reads anchors from the public Mirror Node; the trust anchor is the operator account that pays for each anchor message.
 - The `93,600`-second (26-hour) reference-demo limit is the [testnet feed's published 24-hour heartbeat](https://reference-data-directory.vercel.app/feeds-hedera-testnet.json) plus a two-hour allowance. The contract rejects older observations; this application policy is not a trading-freshness guarantee.
 
 ## Inspect the historical receipt

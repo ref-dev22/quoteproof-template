@@ -31,18 +31,21 @@ async function freePort() {
 
 async function waitForHttp200(url, timeoutMs, requestTimeoutMs, child) {
   const begin = Date.now();
+  let lastResult = "no response";
   while (Date.now() - begin < timeoutMs) {
     if (child.exitCode !== null) throw new Error(`server exited early with code ${child.exitCode}`);
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(requestTimeoutMs) });
       await response.body?.cancel();
       if (response.status === 200) return Date.now() - begin;
-    } catch {
+      lastResult = `HTTP ${response.status}`;
+    } catch (error) {
       // Compilation and startup can reject requests before the server is ready.
+      lastResult = error instanceof Error ? error.message : String(error);
     }
     await delay(mode === "dev" ? 2000 : 1000);
   }
-  throw new Error(`GET ${url} did not return 200 within ${timeoutMs / 1000} seconds`);
+  throw new Error(`GET ${url} did not return 200 within ${timeoutMs / 1000} seconds (last: ${lastResult})`);
 }
 
 async function runReleaseSmoke(baseUrl) {
@@ -157,12 +160,9 @@ try {
     log("assertions", Date.now() - assertionStart);
   } else {
     const previewStart = Date.now();
-    const preview = await fetch(`${baseUrl}/api/quote/preview?cents=100`, {
-      signal: AbortSignal.timeout(30_000),
-    });
-    await preview.body?.cancel();
+    // Cold route compilation and public Testnet reads can each outlast one short request.
+    await waitForHttp200(`${baseUrl}/api/quote/preview?cents=100`, 180_000, 60_000, server);
     log("preview", Date.now() - previewStart);
-    if (preview.status !== 200) throw new Error(`README dev preview returned HTTP ${preview.status}; expected 200`);
     const hcsStart = Date.now();
     let hcsStatus = "unavailable";
     try {

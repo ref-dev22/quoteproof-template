@@ -34,25 +34,25 @@ export const Footer = () => {
       </div>
       <div className="w-full">
         <ul className="menu menu-horizontal w-full">
-          <div className="flex justify-center items-center gap-3 text-sm w-full text-base-content/60">
+          <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-sm w-full text-base-content/60">
             <a
-              href="https://github.com/hedera-dev/scaffold-hbar"
+              href="https://github.com/ref-dev22/quoteproof-template"
               target="_blank"
               rel="noreferrer"
               className="link hover:text-primary"
             >
-              GitHub
+              QuoteProof source
             </a>
             <span className="opacity-30">|</span>
             <span>
               Built on{" "}
               <a
-                href="https://hedera.com/"
+                href="https://github.com/hedera-dev/scaffold-hbar"
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold link hover:text-primary"
               >
-                Hedera
+                Scaffold-HBAR
               </a>
             </span>
             <span className="opacity-30">|</span>
