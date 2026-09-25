@@ -18,10 +18,10 @@ Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.emai
 From an empty parent directory, scaffold the template:
 
 ```bash
-npm create scaffold-hbar@latest -- --template ref-dev22/quoteproof-template
+npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills
 ```
 
-The CLI asks for a project name (enter `quoteproof`), whether to install Hedera Skills (choose No for this walkthrough), and the Hedera network (choose Testnet). It then installs dependencies with npm automatically. The `--` forwards `--template` to the creator; without it, npm treats the repository as a positional argument and opens the generic starter menu.
+There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. The creator installs dependencies automatically. The `--` forwards the flags to the creator; without it, npm may consume them instead.
 
 Then start the wallet-free preview:
 

@@ -1,0 +1,45 @@
+name: README Start here scaffold
+
+on:
+  push:
+    branches: [main, fix/start-here-rate-limit]
+    paths:
+      - README.md
+      - scripts/ci-readme-start-here.sh
+      - .github/workflows/readme-start-here.yml
+  pull_request:
+    paths:
+      - README.md
+      - scripts/ci-readme-start-here.sh
+      - .github/workflows/readme-start-here.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readme-start-here:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+      - name: Run the first Start here bash block verbatim
+        run: bash scripts/ci-readme-start-here.sh normal
+
+  readme-start-here-rate-limited:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+      - name: Exhaust anonymous GitHub core quota and run the README command
+        run: bash scripts/ci-readme-start-here.sh rate-limited
