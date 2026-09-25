@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import referenceReceipt from "../../../examples/receipt-testnet.json";
 import { useQuery } from "@tanstack/react-query";
 import { type Hash, type Hex, decodeEventLog, formatUnits, zeroAddress } from "viem";
@@ -14,12 +14,15 @@ import {
   InformationCircleIcon,
   LinkIcon,
   LockClosedIcon,
+  MinusCircleIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-hbar";
 import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-hbar";
+import { type CheckTone, checkTone, shareAutoComparisonKey } from "~~/utils/quoteCheckVisual";
 import {
   HISTORICAL_HCS_REFERENCE,
   type HcsAnchorReference,
@@ -176,6 +179,37 @@ function historicalOracleStatusLabel(status: StoredComparisonResponse["historica
   }[status];
 }
 
+const CheckResultCard = ({
+  label,
+  text,
+  tone,
+  children,
+}: {
+  label: string;
+  text: string;
+  tone: CheckTone;
+  children?: ReactNode;
+}) => {
+  const Icon = tone === "success" ? CheckCircleIcon : tone === "error" ? XCircleIcon : MinusCircleIcon;
+  const cardClass =
+    tone === "success"
+      ? "border-success/40 bg-success/5"
+      : tone === "error"
+        ? "border-error/40 bg-error/5"
+        : "border-base-300 bg-base-100";
+  const iconClass = tone === "success" ? "text-success" : tone === "error" ? "text-error" : "text-base-content/50";
+  return (
+    <div className={`rounded-xl border p-3 ${cardClass}`} data-check-state={tone}>
+      <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">{label}</p>
+      <p className="mt-1 flex items-start gap-2 text-sm font-semibold">
+        <Icon className={`h-5 w-5 shrink-0 ${iconClass}`} aria-hidden="true" />
+        <span>{text}</span>
+      </p>
+      {children}
+    </div>
+  );
+};
+
 function serializeReceipt(proof: ReceiptProof): Record<string, string> {
   return {
     schemaVersion: proof.quote.schemaVersion.toString(),
@@ -239,7 +273,13 @@ const FailureExercises = () => (
   </section>
 );
 
-const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
+const ReceiptProofCard = ({
+  txHash,
+  requestedReceipt,
+}: {
+  txHash?: Hash;
+  requestedReceipt?: { hash: Hash; anchor?: HcsAnchorReference };
+}) => {
   const publicClient = usePublicClient({ chainId: TESTNET_CHAIN_ID });
   const [sharedLink, setSharedLink] = useState<{ hash: Hash; anchor?: HcsAnchorReference }>();
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "reverted" | "unavailable">("idle");
@@ -249,8 +289,11 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
   const [hcsStatus, setHcsStatus] = useState<HcsAnchorViewStatus>("not_anchored");
   const [isComparing, setIsComparing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const activeHash = txHash ?? sharedLink?.hash;
-  const anchorReference = txHash ? undefined : sharedLink?.anchor;
+  const autoComparedKey = useRef<string | undefined>(undefined);
+  const comparisonInFlight = useRef(false);
+  const activeHash = requestedReceipt?.hash ?? txHash ?? sharedLink?.hash;
+  const anchorReference = requestedReceipt?.anchor ?? (txHash ? undefined : sharedLink?.anchor);
+  const shareHash = requestedReceipt?.hash ?? (txHash ? undefined : sharedLink?.hash);
 
   useEffect(() => {
     const queryHash = new URLSearchParams(window.location.search).get("tx");
@@ -264,6 +307,7 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     setComparison(undefined);
     setComparisonError(undefined);
     setHcsStatus("not_anchored");
+    autoComparedKey.current = undefined;
   }, [activeHash]);
 
   useEffect(() => {
@@ -310,21 +354,20 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     };
   }, [activeHash, publicClient]);
 
-  if (!activeHash) return null;
-
-  const sharePath = quoteSharePath(activeHash, anchorReference);
+  const sharePath = activeHash ? quoteSharePath(activeHash, anchorReference) : "";
   const shareUrl = typeof window === "undefined" ? sharePath : `${window.location.origin}${sharePath}`;
-  const explorerUrl = getBlockExplorerTxLink(TESTNET_CHAIN_ID, activeHash);
+  const explorerUrl = activeHash ? getBlockExplorerTxLink(TESTNET_CHAIN_ID, activeHash) : "";
   const mirrorUrl = `https://testnet.mirrornode.hedera.com/api/v1/contracts/results/${activeHash}`;
 
   const copyShareUrl = async () => {
+    if (!activeHash) return;
     await navigator.clipboard?.writeText(shareUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
 
   const downloadReceipt = () => {
-    if (!proof) return;
+    if (!proof || !activeHash) return;
     const blob = new Blob([JSON.stringify(serializeReceipt(proof), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -335,8 +378,9 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const compareStoredReceipt = async () => {
-    if (!proof || !activeHash || isComparing) return;
+  const compareStoredReceipt = useCallback(async () => {
+    if (!proof || !activeHash || comparisonInFlight.current) return;
+    comparisonInFlight.current = true;
     setIsComparing(true);
     setComparison(undefined);
     setComparisonError(undefined);
@@ -373,14 +417,26 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
     } catch (error) {
       setComparisonError(error instanceof Error ? error.message : "The receipt comparison request failed");
     } finally {
+      comparisonInFlight.current = false;
       setIsComparing(false);
     }
-  };
+  }, [activeHash, anchorReference, proof]);
+
+  useEffect(() => {
+    const key = shareAutoComparisonKey(activeHash, shareHash, proof?.commitment);
+    if (!key || autoComparedKey.current === key) return;
+    autoComparedKey.current = key;
+    void compareStoredReceipt();
+  }, [activeHash, compareStoredReceipt, proof?.commitment, shareHash]);
+
+  if (!activeHash) return null;
 
   return (
     <section
+      id="receipt-section"
       aria-labelledby="receipt-heading"
-      className="mt-6 rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm"
+      tabIndex={-1}
+      className="mt-6 scroll-mt-6 rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -470,31 +526,31 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
           </div>
           {comparison ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
-                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Local consistency</p>
-                <p className="mt-1 m-0 text-sm font-semibold">
-                  {comparisonStatusLabel(comparison.localConsistency.status)}
-                </p>
+              <CheckResultCard
+                label="Local consistency"
+                text={comparisonStatusLabel(comparison.localConsistency.status)}
+                tone={checkTone(comparison.localConsistency.status)}
+              >
                 {comparison.localConsistency.errors.length > 0 ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">
                     {comparison.localConsistency.errors.join("; ")}
                   </p>
                 ) : null}
-              </div>
-              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
-                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Recorded state</p>
-                <p className="mt-1 m-0 text-sm font-semibold">
-                  {comparisonStatusLabel(comparison.recordedComparison.status)}
-                </p>
+              </CheckResultCard>
+              <CheckResultCard
+                label="Recorded state"
+                text={comparisonStatusLabel(comparison.recordedComparison.status)}
+                tone={checkTone(comparison.recordedComparison.status)}
+              >
                 {comparison.recordedComparison.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.recordedComparison.error}</p>
                 ) : null}
-              </div>
-              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
-                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">Historical oracle</p>
-                <p className="mt-1 m-0 text-sm font-semibold">
-                  {historicalOracleStatusLabel(comparison.historicalOracle.status)}
-                </p>
+              </CheckResultCard>
+              <CheckResultCard
+                label="Historical oracle"
+                text={historicalOracleStatusLabel(comparison.historicalOracle.status)}
+                tone={checkTone(comparison.historicalOracle.status)}
+              >
                 <p className="mt-2 m-0 text-xs leading-5 text-base-content/60">
                   Round {comparison.historicalOracle.requestedRoundId}
                   {comparison.historicalOracle.returnedRoundId
@@ -507,10 +563,8 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
                 {comparison.historicalOracle.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.historicalOracle.error}</p>
                 ) : null}
-              </div>
-              <div className="rounded-xl border border-base-300 bg-base-100 p-3">
-                <p className="m-0 text-xs uppercase tracking-wider text-base-content/50">HCS anchor</p>
-                <p className="mt-1 m-0 text-sm font-semibold">{hcsAnchorStatusLabel(hcsStatus)}</p>
+              </CheckResultCard>
+              <CheckResultCard label="HCS anchor" text={hcsAnchorStatusLabel(hcsStatus)} tone={checkTone(hcsStatus)}>
                 {anchorReference ? (
                   <a
                     className="mt-2 block text-xs leading-5 link"
@@ -521,7 +575,7 @@ const ReceiptProofCard = ({ txHash }: { txHash?: Hash }) => {
                     Topic {anchorReference.topicId} · message {anchorReference.sequenceNumber}
                   </a>
                 ) : null}
-              </div>
+              </CheckResultCard>
             </div>
           ) : null}
           {comparisonError ? <p className="mt-3 m-0 text-xs text-error">{comparisonError}</p> : null}
@@ -566,6 +620,7 @@ const QuoteProofExperience = () => {
   const [usdInput, setUsdInput] = useState("1.00");
   const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const [txHash, setTxHash] = useState<Hash>();
+  const [requestedReceipt, setRequestedReceipt] = useState<{ hash: Hash; anchor?: HcsAnchorReference }>();
   const [writeMessage, setWriteMessage] = useState<string>();
   const [writeError, setWriteError] = useState(false);
   const cents = useMemo(() => parseUsdToCents(usdInput), [usdInput]);
@@ -654,6 +709,23 @@ const QuoteProofExperience = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!requestedReceipt) return;
+    const frame = window.requestAnimationFrame(() => {
+      const section = document.getElementById("receipt-section");
+      if (!section) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      section.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [requestedReceipt]);
+
+  const openHistoricalReceipt = () => {
+    window.history.replaceState({}, "", quoteSharePath(HISTORICAL_TX, HISTORICAL_HCS_REFERENCE));
+    setRequestedReceipt({ hash: HISTORICAL_TX as Hash, anchor: HISTORICAL_HCS_REFERENCE });
+  };
+
   const switchToTestnet = async () => {
     try {
       await switchChainAsync({ chainId: TESTNET_CHAIN_ID });
@@ -686,6 +758,7 @@ const QuoteProofExperience = () => {
     try {
       const hash = await writeContractAsync({ functionName: "createQuote", args: [cents, preview[1], preview[0]] });
       if (hash) {
+        setRequestedReceipt(undefined);
         setTxHash(hash);
         window.history.replaceState({}, "", `/?tx=${hash}`);
         setWriteMessage("The transaction is confirmed. Loading the event-bound receipt below.");
@@ -703,7 +776,7 @@ const QuoteProofExperience = () => {
       <section className="hedera-gradient px-5 pb-10 pt-6 text-white sm:pb-20 sm:pt-14">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <span className="badge border-white/20 bg-white/10 py-4 text-white">HED-003 · QuoteProof</span>
+            <span className="badge border-white/20 bg-white/10 py-4 text-white">QuoteProof</span>
             <div className="rounded-full border border-white/20 bg-black/10 px-3 py-1 text-xs font-medium">
               <span className="sm:hidden">Testnet · {TESTNET_CHAIN_ID}</span>
               <span className="hidden sm:inline">Hedera Testnet · chain {TESTNET_CHAIN_ID}</span>
@@ -725,13 +798,14 @@ const QuoteProofExperience = () => {
               className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-xs font-semibold sm:mt-7 sm:gap-x-5 sm:text-sm"
             >
               {HAS_REFERENCE_REGISTRY && (
-                <a
+                <button
                   aria-label="Historical testnet receipt"
                   className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
-                  href={quoteSharePath(HISTORICAL_TX, HISTORICAL_HCS_REFERENCE)}
+                  type="button"
+                  onClick={openHistoricalReceipt}
                 >
                   Receipt
-                </a>
+                </button>
               )}
               <a
                 className="underline decoration-white/50 underline-offset-4 hover:decoration-white"
@@ -896,7 +970,7 @@ const QuoteProofExperience = () => {
           </div>
         </section>
 
-        <ReceiptProofCard txHash={txHash} />
+        <ReceiptProofCard txHash={txHash} requestedReceipt={requestedReceipt} />
 
         <section aria-labelledby="trust-heading" className="mt-6 grid gap-6 md:grid-cols-3">
           <article className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-sm">
