@@ -9,7 +9,16 @@ It does more than read a price feed: anyone can verify a receipt later down to t
 
 [Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1).
 
-![Four passing read-only checks for the historical receipt in the isolated judge preview](docs/images/historical-four-checks.png)
+![QuoteProof badge and four passing read-only checks for the historical receipt in the isolated judge preview](docs/images/historical-four-checks.png)
+
+## Live evidence
+
+| Item | Hedera Testnet evidence |
+| --- | --- |
+| Registry contract | [QuoteProofRegistry `0.0.10645852`](https://hashscan.io/testnet/contract/0xa1a741aF6e0A45164e2Af6A1C35dC30275629709) |
+| Historical receipt transaction | [Confirmed contract call](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) |
+| HCS topic `0.0.10698279` | [Topic and submit key](https://hashscan.io/testnet/topic/0.0.10698279) |
+| HCS message 1 | [Confirmed message submission](https://hashscan.io/testnet/transaction/1790260036.769623104) |
 
 ## How it works
 
@@ -17,6 +26,23 @@ It does more than read a price feed: anyone can verify a receipt later down to t
 2. Record an event-bound receipt with a connected Testnet wallet.
 3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
 4. Optionally anchor the receipt to an HCS topic; anyone can read it back from the Mirror Node and verify it.
+
+```mermaid
+flowchart LR
+  F[Chainlink feed] --> P[Preview quote] --> R[Record receipt] --> G[Registry]
+  G -- confirmed event --> H[HCS anchor] --> M[Mirror Node] --> V[Verify: four checks]
+  R --> V
+  F --> V
+  G --> V
+```
+
+## Why this design
+
+- The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
+- The receipt records the exact oracle round so verification compares the historical observation used at recording time, not a later price.
+- The server anchors to HCS only after it confirms a successful transaction with one matching `QuoteRecorded` event, avoiding an anchor for an unconfirmed receipt.
+- A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message through the Mirror Node without trusting a server response.
+- The `93,600`-second (26-hour) reference-demo limit is the [testnet feed's published 24-hour heartbeat](https://reference-data-directory.vercel.app/feeds-hedera-testnet.json) plus a two-hour allowance. The contract rejects older observations; this application policy is not a trading-freshness guarantee.
 
 ## What you'll learn
 
@@ -71,7 +97,7 @@ See tampering caught in 30 seconds: `npm run demo`.
 
 Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, the stored registry commitment, and the optional HCS anchor separately. The share link carries the HCS topic and sequence outside the receipt JSON; the historical HCS check uses pinned public IDs and needs no environment settings.
 
-Open the historical share link above and select **Compare stored commitment**. The fourth card should show **HCS anchor matches** when the Mirror Node is available. For your own topic, set its public `HCS_TOPIC_ID` and your operator's public `HCS_OPERATOR_ID` in `packages/nextjs/.env.local`, then restart the dev server. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
+Open the historical share link above; its four read-only checks run automatically. Select **Compare stored commitment** to rerun them. The fourth card should show **HCS anchor matches** when the Mirror Node is available. For your own topic, set its public `HCS_TOPIC_ID` and your operator's public `HCS_OPERATOR_ID` in `packages/nextjs/.env.local`, then restart the dev server. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
 
 Exported JSON can be checked without the browser:
 
