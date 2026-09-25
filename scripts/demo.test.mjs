@@ -29,23 +29,27 @@ test("offline demo catches all three fixture mutations", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(
     result.stdout,
-    /\| genuine \| valid \| skipped \(offline\) \| skipped \(offline\) \| PASS \|/,
+    /\| genuine \| valid \| match \| skipped \(offline\) \| skipped \(offline\) \| PASS \|/,
   );
   assert.match(
     result.stdout,
-    /\| tinybars \+1 \| invalid \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
+    /\| tinybars \+1 \| invalid \| match \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
   );
   assert.match(
     result.stdout,
-    /\| cents 1000 \| valid \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
+    /\| cents 1000 \| valid \| mismatch \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
   );
   assert.match(
     result.stdout,
-    /\| double price \| valid \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
+    /\| double price \| valid \| mismatch \| skipped \(offline\) \| skipped \(offline\) \| CAUGHT \|/,
   );
   assert.match(
     result.stdout,
     /receipt commitment does not match the independent expected commitment/,
+  );
+  assert.match(
+    result.stdout,
+    /Three layers: arithmetic \(local\), comparison with the issued quote, and on-chain records \(oracle round \+ registry\)\./,
   );
 });
 
@@ -71,6 +75,6 @@ test("demo fails if a tampered case unexpectedly passes", (t) => {
   assert.equal(result.status, 1, result.stderr);
   assert.match(
     result.stdout,
-    /\| cents 1000 \| valid \| skipped \(offline\) \| skipped \(offline\) \| UNEXPECTED \|/,
+    /\| cents 1000 \| valid \| match \| skipped \(offline\) \| skipped \(offline\) \| UNEXPECTED \|/,
   );
 });

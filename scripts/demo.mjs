@@ -94,6 +94,7 @@ function reportRow(caseInfo, result, online) {
     cells: [
       caseInfo.name,
       local,
+      expected,
       oracle,
       stored,
       expectedOutcome
@@ -127,10 +128,13 @@ export function main(args = process.argv.slice(2)) {
     "Expected quote: bundled genuine receipt; oracle and stored-record columns use read-only RPC when available.",
   );
   console.log(
-    "| Case | Local check | Oracle round | Stored record | Verdict | Reason |",
+    "| Case | Local check | Issued quote | Oracle round | Stored record | Verdict | Reason |",
   );
-  console.log("| --- | --- | --- | --- | --- | --- |");
+  console.log("| --- | --- | --- | --- | --- | --- | --- |");
   for (const row of rows) console.log(`| ${row.cells.map(cell).join(" | ")} |`);
+  console.log(
+    "Three layers: arithmetic (local), comparison with the issued quote, and on-chain records (oracle round + registry).",
+  );
   if (rows.some((row) => !row.expectedOutcome)) process.exitCode = 1;
 }
 
