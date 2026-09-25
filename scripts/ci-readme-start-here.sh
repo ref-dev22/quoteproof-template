@@ -56,7 +56,8 @@ if [[ "$mode" == manifest-unavailable ]]; then
   printf 'GitHub API: unreachable; template archive: local server.\n'
 fi
 
-version="$(npm create scaffold-hbar@latest -- --version </dev/null)"
+version="$(npm view create-scaffold-hbar@latest version)"
+test -n "$version"
 printf 'Resolved create-scaffold-hbar version: %s\n' "$version"
 npm_version="$(npm --version)"
 printf 'npm version: %s\n' "$npm_version"
