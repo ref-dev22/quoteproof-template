@@ -45,6 +45,10 @@ export function forgeDisplayState(state: ForgeRunState): "idle" | "running" | "f
 
 export type ForgeCheck = "local" | "stored" | "oracle" | "hcs";
 
+export function forgeScrollOptions(reduceMotion: boolean): { behavior: "instant" | "smooth"; block: "start" } {
+  return { behavior: reduceMotion ? "instant" : "smooth", block: "start" };
+}
+
 export function forgeCheckExplanation(check: ForgeCheck, status: string): string | undefined {
   if (!["invalid", "mismatch", "not_found", "wrong_context", "wrong_network"].includes(status)) return undefined;
   if (check === "local") return "The receipt fields no longer agree with their fingerprint.";

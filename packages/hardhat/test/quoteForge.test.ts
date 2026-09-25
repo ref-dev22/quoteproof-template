@@ -15,6 +15,7 @@ import {
   forgeDisplayState,
   forgeReceipt,
   forgeRunReducer,
+  forgeScrollOptions,
   initialForgeRunState,
   isHistoricalForgeReceipt,
 } from "../../nextjs/utils/quoteForge";
@@ -121,5 +122,10 @@ describe("historical receipt forge simulation", function () {
     expect(forgeCheckExplanation("hcs", "invalid")).to.be.a("string");
     expect(forgeCheckExplanation("hcs", "unavailable")).to.equal(undefined);
     expect(forgeDisplayState(forgeRunReducer(state, { type: "reset" }))).to.equal("idle");
+  });
+
+  it("scrolls to the start of the checks and respects reduced motion", function () {
+    expect(forgeScrollOptions(false)).to.deep.equal({ behavior: "smooth", block: "start" });
+    expect(forgeScrollOptions(true)).to.deep.equal({ behavior: "instant", block: "start" });
   });
 });

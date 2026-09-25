@@ -36,6 +36,7 @@ import {
   forgeDisplayState,
   forgeReceipt,
   forgeRunReducer,
+  forgeScrollOptions,
   initialForgeRunState,
   isHistoricalForgeReceipt,
 } from "~~/utils/quoteForge";
@@ -309,6 +310,7 @@ const ReceiptProofCard = ({
   const [copied, setCopied] = useState(false);
   const autoComparedKey = useRef<string | undefined>(undefined);
   const comparisonInFlight = useRef(false);
+  const forgeChecksRef = useRef<HTMLDivElement>(null);
   const activeHash = requestedReceipt?.hash ?? txHash ?? sharedLink?.hash;
   const anchorReference = requestedReceipt?.anchor ?? (txHash ? undefined : sharedLink?.anchor);
   const historicalProof = isHistoricalForgeReceipt(proof?.commitment);
@@ -412,7 +414,7 @@ const ReceiptProofCard = ({
   };
 
   const compareStoredReceipt = useCallback(
-    async (caseId: ForgeCaseId | null = null) => {
+    async (caseId: ForgeCaseId | null = null, scrollToChecks = false) => {
       if (!proof || !activeHash || comparisonInFlight.current) return;
       comparisonInFlight.current = true;
       dispatchForgeRun({ type: "start", caseId });
@@ -420,6 +422,12 @@ const ReceiptProofCard = ({
       setComparison(undefined);
       setComparisonError(undefined);
       setHcsStatus(hcsAnchorViewStatus(checkAnchorReference));
+      if (scrollToChecks) {
+        window.requestAnimationFrame(() => {
+          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          forgeChecksRef.current?.scrollIntoView(forgeScrollOptions(reduceMotion));
+        });
+      }
       try {
         const receipt = caseId ? forgeReceipt(caseId) : serializeReceipt(proof);
         const comparisonRequest = fetch("/api/quote/compare", {
@@ -575,6 +583,7 @@ const ReceiptProofCard = ({
               {isComparing ? "Comparing…" : "Compare stored commitment"}
             </button>
           </div>
+          <div ref={forgeChecksRef} className="h-px scroll-mt-24 lg:scroll-mt-6" aria-hidden="true" />
           {forgeRun.caseId ? (
             <p role="status" className="mt-4 rounded-xl border border-error/40 bg-error/10 p-3 text-sm font-semibold">
               Forged copy (simulation) · {FORGE_CASES.find(item => item.id === forgeRun.caseId)?.label}
@@ -682,7 +691,7 @@ const ReceiptProofCard = ({
                     key={item.id}
                     type="button"
                     className={`btn btn-sm h-auto min-w-0 max-w-full whitespace-normal break-words py-2 text-left leading-snug ${forgeRun.caseId === item.id ? "btn-error" : "btn-outline"}`}
-                    onClick={() => void compareStoredReceipt(item.id)}
+                    onClick={() => void compareStoredReceipt(item.id, true)}
                     disabled={isComparing}
                   >
                     {item.label}
@@ -691,7 +700,7 @@ const ReceiptProofCard = ({
                 <button
                   type="button"
                   className="btn btn-sm btn-outline"
-                  onClick={() => void compareStoredReceipt(null)}
+                  onClick={() => void compareStoredReceipt(null, true)}
                   disabled={isComparing || (!forgeRun.caseId && !forgeRun.forgedEver)}
                 >
                   Restore original
