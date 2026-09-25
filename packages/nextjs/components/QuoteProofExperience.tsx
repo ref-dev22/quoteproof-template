@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import referenceReceipt from "../../../examples/receipt-testnet.json";
 import { useQuery } from "@tanstack/react-query";
 import { type Hash, type Hex, decodeEventLog, formatUnits, zeroAddress } from "viem";
@@ -30,9 +30,21 @@ import {
   showShareCheckPlaceholders,
 } from "~~/utils/quoteCheckVisual";
 import {
+  FORGE_CASES,
+  type ForgeCaseId,
+  forgeCheckExplanation,
+  forgeDisplayState,
+  forgeReceipt,
+  forgeRunReducer,
+  forgeScrollOptions,
+  initialForgeRunState,
+  isHistoricalForgeReceipt,
+} from "~~/utils/quoteForge";
+import {
   HISTORICAL_HCS_REFERENCE,
   type HcsAnchorReference,
   type HcsAnchorViewStatus,
+  displayedHcsAnchorStatus,
   hcsAnchorStatusLabel,
   hcsAnchorViewStatus,
   parseHcsAnchorReference,
@@ -294,19 +306,28 @@ const ReceiptProofCard = ({
   const [comparisonError, setComparisonError] = useState<string>();
   const [hcsStatus, setHcsStatus] = useState<HcsAnchorViewStatus>("not_anchored");
   const [isComparing, setIsComparing] = useState(false);
+  const [forgeRun, dispatchForgeRun] = useReducer(forgeRunReducer, initialForgeRunState);
   const [copied, setCopied] = useState(false);
   const autoComparedKey = useRef<string | undefined>(undefined);
   const comparisonInFlight = useRef(false);
+  const forgeChecksRef = useRef<HTMLDivElement>(null);
   const activeHash = requestedReceipt?.hash ?? txHash ?? sharedLink?.hash;
   const anchorReference = requestedReceipt?.anchor ?? (txHash ? undefined : sharedLink?.anchor);
+  const historicalProof = isHistoricalForgeReceipt(proof?.commitment);
+  const checkAnchorReference = anchorReference ?? (historicalProof ? HISTORICAL_HCS_REFERENCE : undefined);
   const shareHash = requestedReceipt?.hash ?? (txHash ? undefined : sharedLink?.hash);
-  const showCheckingCards = showShareCheckPlaceholders({
-    isShared: Boolean(shareHash),
-    isComparing,
-    hasResults: Boolean(comparison),
-    hasError: Boolean(comparisonError),
-    isReverted: status === "reverted",
-  });
+  const showCheckingCards =
+    isComparing ||
+    showShareCheckPlaceholders({
+      isShared: Boolean(shareHash),
+      isComparing,
+      hasResults: Boolean(comparison),
+      hasError: Boolean(comparisonError),
+      isReverted: status === "reverted",
+    });
+  const displayedHcsStatus = comparison
+    ? displayedHcsAnchorStatus(comparison.localConsistency.status, hcsStatus)
+    : hcsStatus;
 
   useEffect(() => {
     const queryHash = new URLSearchParams(window.location.search).get("tx");
@@ -320,6 +341,7 @@ const ReceiptProofCard = ({
     setComparison(undefined);
     setComparisonError(undefined);
     setHcsStatus("not_anchored");
+    dispatchForgeRun({ type: "reset" });
     autoComparedKey.current = undefined;
   }, [activeHash]);
 
@@ -391,49 +413,69 @@ const ReceiptProofCard = ({
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const compareStoredReceipt = useCallback(async () => {
-    if (!proof || !activeHash || comparisonInFlight.current) return;
-    comparisonInFlight.current = true;
-    setIsComparing(true);
-    setComparison(undefined);
-    setComparisonError(undefined);
-    setHcsStatus(hcsAnchorViewStatus(anchorReference));
-    try {
-      const receipt = serializeReceipt(proof);
-      const response = await fetch("/api/quote/compare", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ receipt }),
-      });
-      const payload = (await response.json()) as StoredComparisonResponse;
-      if (!response.ok) throw new Error("The receipt comparison request failed");
-      setComparison(payload);
-      if (anchorReference) {
-        try {
-          const hcsResponse = await fetch("/api/quote/hcs/verify", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              receipt,
-              transactionHash: activeHash,
-              logIndex: proof.logIndex,
-              topicId: anchorReference.topicId,
-              sequenceNumber: anchorReference.sequenceNumber,
-            }),
-          });
-          const hcsPayload = (await hcsResponse.json()) as { hcsAnchor?: { status?: unknown } };
-          setHcsStatus(hcsAnchorViewStatus(anchorReference, hcsPayload.hcsAnchor?.status));
-        } catch {
-          setHcsStatus("unavailable");
-        }
+  const compareStoredReceipt = useCallback(
+    async (caseId: ForgeCaseId | null = null, scrollToChecks = false) => {
+      if (!proof || !activeHash || comparisonInFlight.current) return;
+      comparisonInFlight.current = true;
+      dispatchForgeRun({ type: "start", caseId });
+      setIsComparing(true);
+      setComparison(undefined);
+      setComparisonError(undefined);
+      setHcsStatus(hcsAnchorViewStatus(checkAnchorReference));
+      if (scrollToChecks) {
+        window.requestAnimationFrame(() => {
+          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          forgeChecksRef.current?.scrollIntoView(forgeScrollOptions(reduceMotion));
+        });
       }
-    } catch (error) {
-      setComparisonError(error instanceof Error ? error.message : "The receipt comparison request failed");
-    } finally {
-      comparisonInFlight.current = false;
-      setIsComparing(false);
-    }
-  }, [activeHash, anchorReference, proof]);
+      try {
+        const receipt = caseId ? forgeReceipt(caseId) : serializeReceipt(proof);
+        const comparisonRequest = fetch("/api/quote/compare", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ receipt }),
+        }).then(async response => {
+          const payload = (await response.json()) as StoredComparisonResponse;
+          if (!response.ok) throw new Error("The receipt comparison request failed");
+          return payload;
+        });
+        const hcsRequest: Promise<HcsAnchorViewStatus> = checkAnchorReference
+          ? fetch("/api/quote/hcs/verify", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                receipt,
+                transactionHash: activeHash,
+                logIndex: proof.logIndex,
+                topicId: checkAnchorReference.topicId,
+                sequenceNumber: checkAnchorReference.sequenceNumber,
+              }),
+            }).then(async response => {
+              const payload = (await response.json()) as { hcsAnchor?: { status?: unknown } };
+              return hcsAnchorViewStatus(checkAnchorReference, payload.hcsAnchor?.status);
+            })
+          : Promise.resolve("not_anchored");
+        const [comparisonResult, hcsResult] = await Promise.allSettled([comparisonRequest, hcsRequest]);
+        if (comparisonResult.status === "fulfilled") {
+          setComparison(comparisonResult.value);
+        } else {
+          setComparisonError("The receipt comparison request failed. Retry the read-only checks.");
+        }
+        setHcsStatus(hcsResult.status === "fulfilled" ? hcsResult.value : "unavailable");
+        dispatchForgeRun({
+          type:
+            comparisonResult.status === "rejected" || hcsResult.status === "rejected" ? "network_error" : "complete",
+        });
+      } catch {
+        setComparisonError("The receipt comparison request failed. Retry the read-only checks.");
+        dispatchForgeRun({ type: "network_error" });
+      } finally {
+        comparisonInFlight.current = false;
+        setIsComparing(false);
+      }
+    },
+    [activeHash, checkAnchorReference, proof],
+  );
 
   useEffect(() => {
     const key = shareAutoComparisonKey(activeHash, shareHash, proof?.commitment);
@@ -494,7 +536,7 @@ const ReceiptProofCard = ({
 
       {proof ? (
         <div className="mt-5 rounded-2xl border border-success/30 bg-success/5 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-success-content">
+          <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
             <ShieldCheckIcon className="h-5 w-5" aria-hidden="true" />
             Event-bound receipt found
           </div>
@@ -535,12 +577,18 @@ const ReceiptProofCard = ({
             <button
               type="button"
               className="btn btn-sm btn-primary"
-              onClick={() => void compareStoredReceipt()}
+              onClick={() => void compareStoredReceipt(forgeRun.caseId)}
               disabled={!proof || isComparing}
             >
               {isComparing ? "Comparing…" : "Compare stored commitment"}
             </button>
           </div>
+          <div ref={forgeChecksRef} className="h-px scroll-mt-24 lg:scroll-mt-6" aria-hidden="true" />
+          {forgeRun.caseId ? (
+            <p role="status" className="mt-4 rounded-xl border border-error/40 bg-error/10 p-3 text-sm font-semibold">
+              Forged copy (simulation) · {FORGE_CASES.find(item => item.id === forgeRun.caseId)?.label}
+            </p>
+          ) : null}
           {showCheckingCards ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="status">
               {["Local consistency", "Recorded state", "Historical oracle", "HCS anchor"].map(label => (
@@ -559,6 +607,11 @@ const ReceiptProofCard = ({
                     {comparison.localConsistency.errors.join("; ")}
                   </p>
                 ) : null}
+                {forgeRun.caseId && forgeCheckExplanation("local", comparison.localConsistency.status) ? (
+                  <p className="mt-2 text-xs leading-5 text-base-content/80">
+                    {forgeCheckExplanation("local", comparison.localConsistency.status)}
+                  </p>
+                ) : null}
               </CheckResultCard>
               <CheckResultCard
                 label="Recorded state"
@@ -567,6 +620,11 @@ const ReceiptProofCard = ({
               >
                 {comparison.recordedComparison.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.recordedComparison.error}</p>
+                ) : null}
+                {forgeRun.caseId && forgeCheckExplanation("stored", comparison.recordedComparison.status) ? (
+                  <p className="mt-2 text-xs leading-5 text-base-content/80">
+                    {forgeCheckExplanation("stored", comparison.recordedComparison.status)}
+                  </p>
                 ) : null}
               </CheckResultCard>
               <CheckResultCard
@@ -586,20 +644,78 @@ const ReceiptProofCard = ({
                 {comparison.historicalOracle.error ? (
                   <p className="mt-2 m-0 text-xs leading-5 text-error">{comparison.historicalOracle.error}</p>
                 ) : null}
+                {forgeRun.caseId && forgeCheckExplanation("oracle", comparison.historicalOracle.status) ? (
+                  <p className="mt-2 text-xs leading-5 text-base-content/80">
+                    {forgeCheckExplanation("oracle", comparison.historicalOracle.status)}
+                  </p>
+                ) : null}
               </CheckResultCard>
-              <CheckResultCard label="HCS anchor" text={hcsAnchorStatusLabel(hcsStatus)} tone={checkTone(hcsStatus)}>
-                {anchorReference ? (
+              <CheckResultCard
+                label="HCS anchor"
+                text={hcsAnchorStatusLabel(displayedHcsStatus)}
+                tone={checkTone(displayedHcsStatus)}
+              >
+                {checkAnchorReference ? (
                   <a
                     className="mt-2 block text-xs leading-5 link"
-                    href={`https://testnet.mirrornode.hedera.com/api/v1/topics/${anchorReference.topicId}/messages/${anchorReference.sequenceNumber}`}
+                    href={`https://testnet.mirrornode.hedera.com/api/v1/topics/${checkAnchorReference.topicId}/messages/${checkAnchorReference.sequenceNumber}`}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Topic {anchorReference.topicId} · message {anchorReference.sequenceNumber}
+                    Topic {checkAnchorReference.topicId} · message {checkAnchorReference.sequenceNumber}
                   </a>
+                ) : null}
+                {forgeRun.caseId && forgeCheckExplanation("hcs", displayedHcsStatus) ? (
+                  <p className="mt-2 text-xs leading-5 text-base-content/80">
+                    {forgeCheckExplanation("hcs", displayedHcsStatus)}
+                  </p>
                 ) : null}
               </CheckResultCard>
             </div>
+          ) : null}
+          {historicalProof ? (
+            <section
+              aria-labelledby="forge-heading"
+              className="mt-5 border-t border-base-300 pt-5"
+              data-forge-state={forgeDisplayState(forgeRun)}
+            >
+              <h3 id="forge-heading" className="m-0 text-base font-semibold">
+                Try to forge this receipt
+              </h3>
+              <p className="mt-2 text-sm text-base-content/80">
+                Simulation: runs a prepared forged copy through the same read-only checks. Nothing is written to Hedera.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {FORGE_CASES.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`btn btn-sm h-auto min-w-0 max-w-full whitespace-normal break-words py-2 text-left leading-snug ${forgeRun.caseId === item.id ? "btn-error" : "btn-outline"}`}
+                    onClick={() => void compareStoredReceipt(item.id, true)}
+                    disabled={isComparing}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => void compareStoredReceipt(null, true)}
+                  disabled={isComparing || (!forgeRun.caseId && !forgeRun.forgedEver)}
+                >
+                  Restore original
+                </button>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-base-content/60">
+                These prepared forgeries come from <code>examples/adversarial</code>, the same cases checked by{" "}
+                <code>npm run demo</code>.
+              </p>
+              {forgeRun.phase === "network_error" ? (
+                <p role="status" className="mt-3 text-sm text-base-content/80">
+                  A network check could not finish. Retry the read-only comparison.
+                </p>
+              ) : null}
+            </section>
           ) : null}
           {comparisonError ? <p className="mt-3 m-0 text-xs text-error">{comparisonError}</p> : null}
         </div>
