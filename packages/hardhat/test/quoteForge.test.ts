@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import genuineFixture from "../../../examples/adversarial/genuine.json";
-import { parseReceiptJson, verifyReceiptObject } from "../utils/quoteReceipt";
+import { REFERENCE_MAX_AGE, parseReceiptJson, verifyReceiptObject } from "../utils/quoteReceipt";
 import {
   compareExpectedQuote,
   compareHistoricalOracle,
@@ -41,7 +41,13 @@ describe("historical receipt forge simulation", function () {
     expect(forgeReceipt("tinybar").tinybars).to.equal((BigInt(genuine.tinybars) + 1n).toString());
   });
 
-  it("matches the demo's local and issued-quote verdicts, and identifies independent checks", function () {
+  it("matches the demo when its bundled historical policy is active", function () {
+    // The separate policy workshop intentionally changes the app's maximum age
+    // without rewriting this historical fixture. It must then reject the old receipt.
+    if (REFERENCE_MAX_AGE.toString() !== genuine.maximumAge) {
+      expect(verifyReceiptObject(genuine, context).errors).to.include("maximumAge does not match the frozen policy");
+      return;
+    }
     expect(verifyReceiptObject(genuine, context).valid).to.equal(true);
     expect(compareExpectedQuote(genuine, expected).status).to.equal("match");
     expect(compareStoredCommitment(genuine.commitment, genuine.commitment).status).to.equal("match");
