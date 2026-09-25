@@ -179,6 +179,6 @@ Anchoring the same receipt twice creates two HCS messages. The verifier's trust 
 - `packages/nextjs/components/QuoteProofExperience.tsx`: preview, guarded wallet write, share/export and comparison UI.
 - `packages/nextjs/app/api/quote/preview/route.ts` and `compare/route.ts`: read-only API paths.
 - `docs/release-evidence.md`: revision-specific historical checks and hosted-preview provenance.
-- `LICENCE`: MIT license and upstream notice.
+- `LICENSE`: MIT license and upstream notice.
 
 AI-assisted implementation and review were used. Developers can reproduce the checks above and should inspect the code and dependency advisories before adapting this template.
