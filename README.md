@@ -11,46 +11,6 @@ It does more than read a price feed: anyone can verify a receipt later down to t
 
 ![QuoteProof badge and four passing read-only checks for the historical receipt in the isolated judge preview](docs/images/historical-four-checks.png)
 
-## Live evidence
-
-| Item | Hedera Testnet evidence |
-| --- | --- |
-| Registry contract | [QuoteProofRegistry `0.0.10645852`](https://hashscan.io/testnet/contract/0xa1a741aF6e0A45164e2Af6A1C35dC30275629709) |
-| Historical receipt transaction | [Confirmed contract call](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) |
-| HCS topic `0.0.10698279` | [Topic and submit key](https://hashscan.io/testnet/topic/0.0.10698279) |
-| HCS message 1 | [Confirmed message submission](https://hashscan.io/testnet/transaction/1790260036.769623104) |
-
-## How it works
-
-1. Preview a bounded USD-to-HBAR reference from the configured Chainlink feed.
-2. Record an event-bound receipt with a connected Testnet wallet.
-3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
-4. Optionally anchor the receipt to an HCS topic; anyone can read it back from the Mirror Node and verify it.
-
-```mermaid
-flowchart LR
-  F[Chainlink feed] --> P[Preview quote] --> R[Record receipt] --> G[Registry]
-  G -- confirmed event --> H[HCS anchor] --> M[Mirror Node] --> V[Verify: four checks]
-  R --> V
-  F --> V
-  G --> V
-```
-
-## Why this design
-
-- The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
-- The receipt records the exact oracle round so verification compares the historical observation used at recording time, not a later price.
-- The server anchors to HCS only after it confirms a successful transaction with one matching `QuoteRecorded` event, avoiding an anchor for an unconfirmed receipt.
-- A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message through the Mirror Node without trusting a server response.
-- The `93,600`-second (26-hour) reference-demo limit is the [testnet feed's published 24-hour heartbeat](https://reference-data-directory.vercel.app/feeds-hedera-testnet.json) plus a two-hour allowance. The contract rejects older observations; this application policy is not a trading-freshness guarantee.
-
-## What you'll learn
-
-- Oracle provenance: record which Chainlink round a price came from so anyone can check that observation later, rather than relying on the latest price.
-- On-chain fingerprints: hash the quote fields into a commitment stored on Hedera, emit those fields in `QuoteRecorded`, and recompute the hash to check them.
-- A public audit trail with HCS: optionally anchor a receipt to a topic protected by a server-held submit key; anyone can read the message from the Mirror Node without a key.
-- Verification you can test: adversarial cases show why a well-formed JSON file is not proof on its own.
-
 ## Start here
 
 Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
@@ -90,6 +50,46 @@ curl -i "http://localhost:3001/api/quote/preview?cents=100"
 ```
 
 Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `observedAt` and `tinybars` fields. HTTP `400` means invalid cents; `502` means the reference RPC is unavailable. This endpoint reads a live source, so it is wallet-free but not an offline test.
+
+## How it works
+
+1. Preview a bounded USD-to-HBAR reference from the configured Chainlink feed.
+2. Record an event-bound receipt with a connected Testnet wallet.
+3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
+4. Optionally anchor the receipt to an HCS topic; anyone can read it back from the Mirror Node and verify it.
+
+```mermaid
+flowchart LR
+  F[Chainlink feed] --> P[Preview quote] --> R[Record receipt] --> G[Registry]
+  G -- confirmed event --> H[HCS anchor] --> M[Mirror Node] --> V[Verify: four checks]
+  R --> V
+  F --> V
+  G --> V
+```
+
+## Live evidence
+
+| Item | Hedera Testnet evidence |
+| --- | --- |
+| Registry contract | [QuoteProofRegistry `0.0.10645852`](https://hashscan.io/testnet/contract/0xa1a741aF6e0A45164e2Af6A1C35dC30275629709) |
+| Historical receipt transaction | [Confirmed contract call](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) |
+| HCS topic `0.0.10698279` | [Topic and submit key](https://hashscan.io/testnet/topic/0.0.10698279) |
+| HCS message 1 | [Confirmed message submission](https://hashscan.io/testnet/transaction/1790260036.769623104) |
+
+## What you'll learn
+
+- Oracle provenance: record which Chainlink round a price came from so anyone can check that observation later, rather than relying on the latest price.
+- On-chain fingerprints: hash the quote fields into a commitment stored on Hedera, emit those fields in `QuoteRecorded`, and recompute the hash to check them.
+- A public audit trail with HCS: optionally anchor a receipt to a topic protected by a server-held submit key; anyone can read the message from the Mirror Node without a key.
+- Verification you can test: adversarial cases show why a well-formed JSON file is not proof on its own.
+
+## Why this design
+
+- The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
+- The receipt records the exact oracle round so verification compares the historical observation used at recording time, not a later price.
+- The server anchors to HCS only after it confirms a successful transaction with one matching `QuoteRecorded` event, avoiding an anchor for an unconfirmed receipt.
+- A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message through the Mirror Node without trusting a server response.
+- The `93,600`-second (26-hour) reference-demo limit is the [testnet feed's published 24-hour heartbeat](https://reference-data-directory.vercel.app/feeds-hedera-testnet.json) plus a two-hour allowance. The contract rejects older observations; this application policy is not a trading-freshness guarantee.
 
 ## Inspect the historical receipt
 
