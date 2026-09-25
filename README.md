@@ -67,6 +67,8 @@ Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `
 
 ## Inspect the historical receipt
 
+See tampering caught in 30 seconds: `npm run demo`.
+
 Open the [public Testnet receipt](examples/receipt-testnet.json) or the local [share route](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The linked [transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) is historical evidence; this walkthrough does not create another one. In the app, **Compare stored commitment** reports local consistency, the oracle's exact historical round, the stored registry commitment, and the optional HCS anchor separately. The share link carries the HCS topic and sequence outside the receipt JSON; the historical HCS check uses pinned public IDs and needs no environment settings.
 
 Open the historical share link above and select **Compare stored commitment**. The fourth card should show **HCS anchor matches** when the Mirror Node is available. For your own topic, set its public `HCS_TOPIC_ID` and your operator's public `HCS_OPERATOR_ID` in `packages/nextjs/.env.local`, then restart the dev server. These IDs enable read-only verification; no HCS operator key or anchor token is needed for this check.
