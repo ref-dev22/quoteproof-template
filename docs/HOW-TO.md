@@ -123,7 +123,7 @@ Run `npm run hardhat:test`.
 [quoteHcsAnchorRoute.test.ts](../packages/hardhat/test/quoteHcsAnchorRoute.test.ts) checks the operator and topic submit key.
 [quoteHcsVerifyRoute.test.ts](../packages/hardhat/test/quoteHcsVerifyRoute.test.ts) rejects a foreign payer.
 For read-only verification of your topic, set only the public operator and topic IDs; no signing key or token is required.
-For the published historical topic, leave both IDs **unset**, not empty: see [environment variables](REFERENCE.md#environment-variables).
+The [example environment](../packages/nextjs/.env.example) preserves historical receipt verification with HCS anchoring disabled; see [environment variables](REFERENCE.md#environment-variables) for your own topic.
 
 ## Host a read-only preview
 
@@ -139,5 +139,5 @@ Hosting does not create a registry or receipt.
 | Port 3001 is in use | Another server owns that port. | Stop that server or choose another `--port`; update local URLs too. [Start command](../README.md#start-here). |
 | Reference unavailable or stale | The feed observation exceeds the registry's age policy, or its read failed. | Inspect the [preview response](../packages/nextjs/app/api/quote/preview/route.ts). If stale, wait for a fresh observation; do not weaken the policy. Historical checks use a fixed older round. |
 | RPC or Mirror Node is down | An external read failed or timed out. | Retry the read later; do not record another receipt. The [compare](../packages/nextjs/app/api/quote/compare/route.ts) and [HCS verify](../packages/nextjs/app/api/quote/hcs/verify/route.ts) routes return distinct statuses. |
-| A check is gray | It was skipped, unavailable, not checked, or not configured. | Read the card's status. Fix invalid local input first; retry failed reads later. For historical HCS, unset both public HCS IDs. For your topic, configure both. [Visual states](../packages/nextjs/utils/quoteCheckVisual.ts), [HCS configuration](REFERENCE.md#environment-variables). |
+| A check is gray | It was skipped, unavailable, not checked, or not configured. | Read the card's status. Fix invalid local input first; retry failed reads later. For your own HCS topic, configure both public IDs. [Visual states](../packages/nextjs/utils/quoteCheckVisual.ts), [HCS configuration](REFERENCE.md#environment-variables). |
 | Forge buttons are missing | The simulation is only offered for the published historical receipt. | Open the [historical share link](../README.md) with its transaction and HCS reference. [Forge controls](../packages/nextjs/components/quoteproof/ForgePanel.tsx). |

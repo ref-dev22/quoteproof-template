@@ -12,6 +12,8 @@ Sources: [registry](../packages/hardhat/contracts/QuoteProofRegistry.sol), [rece
 
 ## Trust model
 
+The [registry already binds the issuer wallet](../packages/hardhat/contracts/QuoteProofRegistry.sol#L122); HCS adds an independent, [consensus-timestamped attestation](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10698279/messages/1) from the [operator account](../packages/nextjs/utils/quoteHcs.ts#L148), readable from the [Mirror Node without an EVM RPC](../packages/nextjs/app/api/quote/hcs/verify/route.ts), submitted only after the [on-chain event is confirmed](../packages/nextjs/app/api/quote/hcs/anchor/route.ts#L89).
+
 The [preview route](../packages/nextjs/app/api/quote/preview/route.ts) reads the Testnet registry and Chainlink proxy without a wallet-originating `from` address.
 A wallet write calls `createQuote(cents, expectedRound, expectedNonce)`.
 The contract rechecks the observation and nonce before emitting `QuoteRecorded`.

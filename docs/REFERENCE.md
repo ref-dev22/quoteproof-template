@@ -121,18 +121,19 @@ Public means the value is not a credential; it does not mean a server-only ID is
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Next.js | Optional | Public | WalletConnect provider configuration | Unset; code supplies a starter project ID; unnecessary for read-only checks |
 | `NEXT_PUBLIC_HEDERA_MAINNET_RPC_URL` | Next.js | Optional | Public; browser-visible | Mainnet wallet RPC transport | Unset; `https://mainnet.hashio.io/api` fallback |
 | `NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL` | Next.js | Optional | Public; browser-visible | Testnet wallet transport and quote API reads | Unset; `https://testnet.hashio.io/api` fallback |
-| `HCS_OPERATOR_ID` | Next.js | Required for own-topic verification and anchoring | Public ID, server configuration | Expected message payer; account used for anchoring | Unset for historical verification; empty disables the historical fallback |
+| `HCS_OPERATOR_ID` | Next.js | Required for own-topic verification and anchoring | Public ID, server configuration | Expected message payer; account used for anchoring | Unset for historical verification |
 | `HCS_OPERATOR_KEY` | Next.js | Required for topic creation and anchoring | Secret | ECDSA signing and operator/submit-key checks | Unset; anchoring off |
-| `HCS_TOPIC_ID` | Next.js | Required for own-topic verification and anchoring | Public ID, server configuration | Topic to submit to or verify | Unset for historical verification; empty disables the historical fallback |
+| `HCS_TOPIC_ID` | Next.js | Required for own-topic verification and anchoring | Public ID, server configuration | Topic to submit to or verify | Unset for historical verification |
 | `HCS_ANCHOR_TOKEN` | Next.js | Required for anchoring | Secret | Bearer authorization for the anchor route | Unset; anchor requests rejected |
 
 Sources: [Hardhat config](../packages/hardhat/hardhat.config.ts), [account import](../packages/hardhat/scripts/importAccount.ts), [CLI verifier](../packages/hardhat/scripts/verifyQuote.ts), [Scaffold config](../packages/nextjs/scaffold.config.ts), [HCS verify](../packages/nextjs/app/api/quote/hcs/verify/route.ts), [HCS anchor](../packages/nextjs/app/api/quote/hcs/anchor/route.ts).
-The historical HCS fallback requires **both** public IDs to be absent from the environment.
-Copying the empty HCS entries from `.env.example` makes them present as empty strings; remove those entries for the published historical receipt.
-For your own topic, set both IDs and restart Next.js.
+Leave both IDs unset for the historical receipt; set both for your own topic.
 
 Other code-only controls are not entries in the example files: `HCS_ANCHOR_DISABLED=true` disables submissions after authorization/config checks in the anchor route.
 The [account resolver](../packages/nextjs/app/api/hedera/account/route.ts) accepts `HEDERA_MIRROR_TESTNET_URL` and `HEDERA_MIRROR_MAINNET_URL`; these do not change the fixed HCS Mirror base in [quoteHcs.ts](../packages/nextjs/utils/quoteHcs.ts).
+In [createQuoteProof.ts](../packages/hardhat/scripts/createQuoteProof.ts), `QUOTE_CENTS` supplies the amount when `--cents` is absent, and `QUOTE_OUTPUT` supplies the receipt file path when `--output` is absent.
+The amount must be a decimal integer from 1 to 100,000,000; without an output path, the script does not write a receipt file.
+In [demoCases.ts](../packages/hardhat/scripts/demoCases.ts), `DEMO_FIXTURES_DIR` selects the fixture directory, resolved from the process working directory; unset or empty uses `examples/adversarial` at the repository root.
 
 ## File map
 
