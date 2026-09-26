@@ -7,7 +7,7 @@ A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera T
 
 Scaffold-HBAR's built-in [`oracles` template](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles) shows how to read Chainlink, Supra and Pyth prices. QuoteProof shows how to prove later, to anyone, which exact price a quote used.
 
-It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. The registry records the issuer wallet; HCS adds an independent, consensus-timestamped record from the operator account, written only after the on-chain event confirms and readable from the Mirror Node without an EVM node; anchoring is optional when you deploy your own copy, and the live receipt is already anchored.
+It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. The registry records which wallet issued each receipt. HCS adds an independent, consensus-timestamped record from the operator account, written only after the on-chain event confirms. Anyone can read it from the Mirror Node without an EVM node. The live receipt is already anchored; anchoring is optional in your own copy.
 
 [Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). Once it opens, scroll to **Try to forge this receipt**, change the amount or price, and see which checks catch each forgery.
 
@@ -27,7 +27,7 @@ npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-te
 
 There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. `--skip-install` leaves the template lockfile in place; `npm ci` below installs from it before starting the app. The `--` forwards the flags to the creator. Without it, npm keeps the flags for itself, so the creator asks setup questions; in CI without a terminal, npm 10 and 11 stop with `ERR_TTY_INIT_FAILED`.
 
-If another creator command could not read this template's settings, its Foundry/Yarn defaults can cause `Dependency installation failed` or leave `packages/foundry` instead of `packages/hardhat`; delete that failed scaffold folder and run the command above ([PR #20](https://github.com/ref-dev22/quoteproof-template/pull/20)). If the download itself fails with `Failed to download <url>: <status> <statusText>` and GitHub identifies a rate limit (`403` or `429`), wait for the limit to reset or set `GIGET_AUTH` to a GitHub token for authenticated downloads ([GitHub rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api#exceeding-the-rate-limit)).
+Used a different scaffold command? If you saw `Dependency installation failed`, or got `packages/foundry` instead of `packages/hardhat`, the creator couldn't read this template's settings and fell back to its defaults. Delete that folder and run the command above. If the download itself fails with a GitHub rate-limit error (`403` or `429`), wait for the limit to reset or set `GIGET_AUTH` to a GitHub token. Details: [Troubleshoot](docs/HOW-TO.md#troubleshoot).
 
 Then start the wallet-free preview:
 
