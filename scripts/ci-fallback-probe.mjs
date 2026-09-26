@@ -18,7 +18,7 @@ const save = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null,
 const redact = text => text.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "")
   .replace(/(?:Bearer\s+|(?:token|password|secret|api[_-]?key)\s*[:=]\s*)[^\s"']+/gi, "[REDACTED]")
   .replace(/[A-Za-z0-9_=-]{32,}/g, "[REDACTED]");
-const firstError = text => (redact(text).split(/\r?\n/).map(s => s.trim()).find(s =>
+const firstError = text => (redact(text).split(/\r?\n/).map(s => s.trim()).filter(s => !/^npm warn\b/i.test(s)).find(s =>
   /error|failed|failure|invalid|cannot|could not|not found|can't resolve|YN000[19]|YN0028|ERR!/i.test(s)) || "No error line emitted (see log)").slice(0, 400);
 const statusCode = result => result.status ?? (result.error?.code === "ETIMEDOUT" ? 124 : result.signal ? 128 : 127);
 function record(step, code, command, log, note = "") {
@@ -34,16 +34,19 @@ function run(step, command, args, cwd = app, seconds = 300) {
   const logPath = path.join(root, `${step}.raw.log`);
   const fd = fs.openSync(logPath, "w");
   const result = spawnSync("timeout", ["--kill-after=15s", `${seconds}s`, command, ...args],
-    { cwd, env: process.env, stdio: ["ignore", fd, fd] });
+    { cwd, env: { ...process.env, PROBE_PHASE: step }, stdio: ["ignore", fd, fd] });
   fs.closeSync(fd);
   const log = read(logPath) + (result.error ? `\n${result.error.message}\n` : "");
   return record(step, statusCode(result), [command, ...args].join(" "), log);
 }
 function manager() {
-  const pkg = json(path.join(app, "package.json"));
-  const selected = pkg?.packageManager?.split("@")[0];
+  const selected = selectedManager();
   if (!["npm", "yarn"].includes(selected)) throw new Error(`Unknown selected package manager: ${selected}`);
   return selected;
+}
+function selectedManager() {
+  const attempt = json(path.join(root, "install-attempt.json"));
+  return attempt?.command.split(" ")[0] ?? read(path.join(root, "scaffold.raw.log")).match(/Installing dependencies with (npm|yarn)/)?.[1];
 }
 function scriptArgs(name, extra = []) {
   return manager() === "npm" ? ["run", name, ...(extra.length ? ["--", ...extra] : [])] : [name, ...extra];
@@ -55,6 +58,11 @@ if (action === "observe") {
   const pm = process.argv[3];
   const args = process.argv.slice(4);
   const binary = read(path.join(root, `${pm}-path`)).trim();
+  // CLI 0.4.0 validates forge only after selecting Foundry, before creating files.
+  // Record that observation separately from directory presence (the template has no Foundry package).
+  if (pm === "forge" && args[0] === "--version" && process.env.PROBE_PHASE === "scaffold") {
+    save(path.join(root, "framework-selection.json"), { selected: "foundry", evidence: "CLI invoked forge --version during scaffold preflight" });
+  }
   const installing = process.cwd() === app && args[0] === "install";
   if (installing) {
     save(path.join(root, "install-attempt.json"), { command: [pm, ...args].join(" "), exitCode: null });
@@ -117,12 +125,15 @@ if (action === "observe") {
     "\nServer output during request:\n" + read(path.join(root, "app.raw.log")).slice(before));
 } else if (action === "report") {
   const pkg = json(path.join(app, "package.json"));
-  const facts = { packageManager: pkg?.packageManager ?? "unknown", hardhatExists: fs.existsSync(path.join(app, "packages/hardhat")),
+  const selection = json(path.join(root, "framework-selection.json"));
+  const facts = { selectedPackageManager: selectedManager() ?? "unknown", declaredPackageManager: pkg?.packageManager ?? "unknown", hardhatExists: fs.existsSync(path.join(app, "packages/hardhat")),
     foundryExists: fs.existsSync(path.join(app, "packages/foundry")), ethersResolvableFromNextjs: false };
-  facts.framework = facts.hardhatExists && facts.foundryExists ? "hardhat + foundry" : facts.hardhatExists ? "hardhat" : facts.foundryExists ? "foundry" : "unknown/absent";
+  facts.framework = selection?.selected ?? (facts.hardhatExists ? "hardhat" : facts.foundryExists ? "foundry" : "unknown");
+  facts.frameworkEvidence = selection?.evidence ?? "Directory presence only; no Foundry preflight observed";
   if (pkg) {
     const resolver = "console.log(require.resolve('ethers', {paths: [process.cwd() + '/packages/nextjs']}))";
-    const result = spawnSync(manager() === "yarn" ? "yarn" : "node", manager() === "yarn" ? ["node", "-e", resolver] : ["-e", resolver],
+    const pnp = path.join(app, ".pnp.cjs");
+    const result = spawnSync(process.execPath, [...(fs.existsSync(pnp) ? ["--require", pnp] : []), "-e", resolver],
       { cwd: app, encoding: "utf8", timeout: 30000 });
     facts.ethersResolvableFromNextjs = result.status === 0;
     fs.writeFileSync(path.join(evidence, "ethers.log"), redact((result.stdout || "") + (result.stderr || "")));
@@ -134,7 +145,7 @@ if (action === "observe") {
     json(path.join(evidence, `${step}.json`)) ?? { step, result: "NOT MEASURED", exitCode: null, firstError: "Step did not produce a result; inspect setup/runner logs", command: "" });
   const cell = value => String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
   const summary = `## Manifest-unavailable fallback probe (advisory)\n\n${redact(read(path.join(root, "toolchain.log")))}\n\n` +
-    `Selected package manager: ${facts.packageManager}; framework: ${facts.framework}; packages/hardhat exists: ${facts.hardhatExists}; ethers resolves from Next.js: ${facts.ethersResolvableFromNextjs}.\n\n` +
+    `CLI selected package manager: ${facts.selectedPackageManager}; generated manifest declares: ${facts.declaredPackageManager}; selected framework: ${facts.framework} (${facts.frameworkEvidence}); packages/hardhat exists: ${facts.hardhatExists}; packages/foundry exists: ${facts.foundryExists}; ethers resolves from Next.js: ${facts.ethersResolvableFromNextjs}.\n\n` +
     "| step | result (exit code) | first error |\n|---|---|---|\n" +
     rows.map(r => `| ${r.step} | ${r.result} (${r.exitCode ?? "n/a"}) | ${cell(r.firstError)} |`).join("\n") +
     "\n\nExact commands and observations:\n\n" + rows.map(r => `- ${r.step}: \`${cell(r.command)}\`. ${r.note || ""}`).join("\n") +

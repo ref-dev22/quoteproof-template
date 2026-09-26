@@ -30,7 +30,7 @@ case "${1:?use setup or cleanup}" in
     git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
     # Transparent observers preserve arguments/cwd/environment and return the
     # real install exit code. A failed CLI install must never be retried.
-    for manager in npm yarn; do
+    for manager in npm yarn forge; do
       command -v "$manager" > "$work/$manager-path"
       printf '#!/usr/bin/env bash\nexec node %q observe %q "$@"\n' \
         "$root/scripts/ci-fallback-probe.mjs" "$manager" > "$work/bin/$manager"
