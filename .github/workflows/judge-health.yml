@@ -1,0 +1,32 @@
+name: Judge link health
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: Fail the run after all checks to test GitHub notifications
+        required: false
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      - .github/workflows/judge-health.yml
+      - scripts/ci-judge-health.sh
+
+permissions:
+  contents: read
+
+jobs:
+  judge-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check the public judge link
+        env:
+          SIMULATE_FAILURE: ${{ github.event.inputs.simulate_failure || 'false' }}
+        run: bash scripts/ci-judge-health.sh

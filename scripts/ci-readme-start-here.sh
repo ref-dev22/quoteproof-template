@@ -69,7 +69,8 @@ error_line() {
   node - "$1" <<'NODE'
 const fs = require("node:fs");
 const lines = fs.readFileSync(process.argv[2], "utf8").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-const line = lines.find(value => /Yarn|Foundry|unknown option|validation|Invalid|not installed/i.test(value))
+const line = lines.find(value => /Yarn|Foundry/i.test(value))
+  ?? lines.find(value => /unknown option|validation|Invalid|not installed/i.test(value))
   ?? lines.find(value => /error/i.test(value))
   ?? lines.at(-1)
   ?? "no output";
@@ -92,6 +93,10 @@ if [[ "$mode" == manifest-unavailable ]]; then
   set -e
   old_detail="$(error_line "$work/old.log")"
   if [[ "$old_exit" -ne 0 ]]; then
+    if ! grep -Eiq 'foundry|yarn' <<< "$old_detail"; then
+      printf 'old command failed for an unrelated reason\n' >&2
+      exit 1
+    fi
     old_result="exit $old_exit: $old_detail"
   else
     old_app="$(find "$work/old" -mindepth 1 -maxdepth 1 -type d -print -quit)"
