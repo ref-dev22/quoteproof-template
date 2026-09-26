@@ -227,3 +227,38 @@ jobs:
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-smoke.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/production-timing.json
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-timing.json
+
+  default-install-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout pinned public implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.implementation_ref }}
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reproduce creator default install and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p "$RUNNER_TEMP/quoteproof-default-install"
+          cd "$RUNNER_TEMP/quoteproof-default-install"
+          npx --yes create-scaffold-hbar@0.4.0 app \
+            --template "$GITHUB_REPOSITORY#${{ inputs.implementation_ref }}" \
+            --frontend nextjs-app \
+            --solidity-framework hardhat \
+            --network testnet \
+            --package-manager npm \
+            --ci \
+            --skip-hedera-skills
+          cd app
+          npm ls protobufjs || true
+          npm run next:build
