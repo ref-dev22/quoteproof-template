@@ -5,6 +5,9 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 scratch="$(mktemp -d)"
 parent="$scratch/work"
 mkdir -p "$parent"
+export GIT_CONFIG_GLOBAL="$scratch/gitconfig"
+git config --global user.name 'Tutorial CI'
+git config --global user.email 'tutorial-ci@example.invalid'
 started_at="$(date +%s)"
 server_pid=''
 cleanup() {
