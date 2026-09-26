@@ -178,10 +178,13 @@ jobs:
             npm run demo -- --offline
             npm run demo:test
             npm run hardhat:check-types
+            npm run lint
             npm run hardhat:lint -- --max-warnings=0
             npm run next:check-types
             npm run next:lint -- --max-warnings=0
             npm run next:build
+            npm ls protobufjs
+            node -e 'const path=require("node:path"); const from=path.dirname(require.resolve("@hiero-ledger/proto")); const version=require(require.resolve("protobufjs/package.json",{paths:[from]})).version; if(version!=="8.0.1") throw new Error("@hiero-ledger/proto resolves protobufjs "+version); console.log("@hiero-ledger/proto resolves protobufjs "+version)'
           } 2>&1 | tee "$RELEASE_LOG_DIR/deterministic-checks.log"
 
       - name: Exercise local mock policy workshop on generated scaffold
@@ -227,3 +230,60 @@ jobs:
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-smoke.log
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/production-timing.json
             ${{ runner.temp }}/quoteproof-external-scaffold/logs/dev-timing.json
+
+  default-install-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            timeout_minutes: 20
+          - os: macos-latest
+            timeout_minutes: 20
+          - os: windows-latest
+            timeout_minutes: 40
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    env:
+      IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
+    steps:
+      - name: Checkout pinned public implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.implementation_ref }}
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check creator default install, lint, build, compile, and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          [[ "$IMPLEMENTATION_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'Invalid implementation ref' >&2; exit 1; }
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            temp_root="$(cygpath -u "$RUNNER_TEMP")"
+          else
+            temp_root="$RUNNER_TEMP"
+          fi
+          mkdir -p "$temp_root/quoteproof-default-install"
+          cd "$temp_root/quoteproof-default-install"
+          npx --yes create-scaffold-hbar@0.4.0 app \
+            --template "$GITHUB_REPOSITORY#$IMPLEMENTATION_REF" \
+            --frontend nextjs-app \
+            --solidity-framework hardhat \
+            --network testnet \
+            --package-manager npm \
+            --ci \
+            --skip-hedera-skills
+          cd app
+          npm run lint
+          npm run next:build
+          npm run hardhat:compile
+          npm run hardhat:test
+          npm ls protobufjs
+          node -e 'const path=require("node:path"); const from=path.dirname(require.resolve("@hiero-ledger/proto")); const version=require(require.resolve("protobufjs/package.json",{paths:[from]})).version; if(version!=="8.0.1") throw new Error("@hiero-ledger/proto resolves protobufjs "+version); console.log("@hiero-ledger/proto resolves protobufjs "+version)'
