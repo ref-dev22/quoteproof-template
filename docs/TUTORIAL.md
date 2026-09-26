@@ -10,7 +10,7 @@ From an empty parent directory, run the same command as [Start here](../README.m
 npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills --skip-install
 ```
 
-You should see a `quoteproof` directory with installed dependencies and `packages/hardhat/contracts/QuoteProofRegistry.sol`. If Git identity is missing, set `git config --global user.name` and `git config --global user.email`, then retry in an empty parent directory. If the GitHub template lookup is rate-limited, keep every flag above; they pin Hardhat and npm even when the manifest cannot be read.
+You should see a `quoteproof` directory with `packages/hardhat/contracts/QuoteProofRegistry.sol`. Dependencies are installed in the next step with `npm ci`. If Git identity is missing, set `git config --global user.name` and `git config --global user.email`, then retry in an empty parent directory. If the GitHub template lookup is rate-limited, keep every flag above; they pin Hardhat and npm even when the manifest cannot be read.
 
 ```bash tutorial:start
 cd quoteproof
@@ -24,7 +24,7 @@ npm run next:dev -- --hostname 0.0.0.0 --port 3001
 
 Open the [historical share link on your app](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The page loads the published receipt and runs four checks: local arithmetic, stored registry fingerprint, historical Chainlink round, and HCS anchor. You should see four green matches. If an RPC or Mirror Node is unavailable, a network check can be gray; retry later without recording another transaction.
 
-Scroll to **Try to forge this receipt**. Tap **Add 1 tinybar**: arithmetic turns red, while the other three checks are skipped. Tap **Change $1.00 to $10.00 and recompute the fingerprint**: arithmetic and the real oracle price pass, but the registry and HCS checks turn red. Tap **Double the oracle price and recompute the fingerprint**: only arithmetic passes. **Restore original** returns to four green checks. These buttons change prepared copies in your browser; they do not write to Hedera. If the buttons are absent, open the historical share link above; the simulation is offered only for that receipt.
+Scroll to **Try to forge this receipt**. Tap **Add 1 tinybar**: arithmetic turns red, while the other three checks are skipped. Tap **Change $1.00 to $10.00 and recompute the fingerprint**: arithmetic and the real oracle price pass, but the registry and HCS checks turn red. Tap **Double the oracle price and recompute the fingerprint**: only arithmetic passes. **Restore original** returns to four green checks. These buttons send prepared forged copies through the same read-only checks; nothing is written to Hedera. If the buttons are absent, open the historical share link above; the simulation is offered only for that receipt.
 
 ## 3. Run the same cases in a terminal
 
