@@ -14,10 +14,11 @@ You should see a `quoteproof` directory with installed dependencies and `package
 
 ```bash tutorial:start
 cd quoteproof
+npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3001`. You should see the reference card; the first price fetch may show **Loading reference…**. If port 3001 is in use, stop the other server or change the port in the command and links below. If the feed is stale or the RPC is down, **Reference unavailable or stale** can appear; the historical receipt checks below use an older, fixed observation.
+`npm ci` installs the committed dependency tree after the creator's install. Open `http://localhost:3001`. You should see the reference card; the first price fetch may show **Loading reference…**. If port 3001 is in use, stop the other server or change the port in the command and links below. If the feed is stale or the RPC is down, **Reference unavailable or stale** can appear; the historical receipt checks below use an older, fixed observation.
 
 ## 2. Read and challenge the receipt
 
