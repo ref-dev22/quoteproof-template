@@ -13,7 +13,6 @@ jobs:
     continue-on-error: true
     timeout-minutes: 35
     env:
-      PROBE_ROOT: ${{ runner.temp }}/quoteproof-fallback-probe
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.18.3
+      - name: Set measurement directory on the runner
+        run: echo "PROBE_ROOT=$RUNNER_TEMP/quoteproof-fallback-probe" >> "$GITHUB_ENV"
       # Install before blocking api.github.com; no chain or deploy is started.
       - uses: foundry-rs/foundry-toolchain@v1
         with:
