@@ -38,7 +38,7 @@ You should see a table with the genuine receipt passing and three altered cases 
 
 ## 4. Verify exported JSON
 
-The repo includes the [published receipt JSON](../examples/receipt-testnet.json). From `quoteproof`, run the [same verifier command as the README](../README.md#inspect-the-historical-receipt):
+The repo includes the [published receipt JSON](../examples/receipt-testnet.json). From `quoteproof`, run the [historical verifier command](REFERENCE.md#verifier-flags):
 
 ```bash tutorial:verify
 npm run verify:quote -w @sh/hardhat -- --input ../../examples/receipt-testnet.json --expected-chain-id 296 --expected-registry 0xa1a741aF6e0A45164e2Af6A1C35dC30275629709 --expected-oracle 0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a --compare-stored --rpc-url https://testnet.hashio.io/api
@@ -56,4 +56,4 @@ You should see local `valid`, historical oracle `match`, and stored record `matc
 - [Forge controls](../packages/nextjs/components/quoteproof/ForgePanel.tsx) and [four prepared fixtures](../examples/adversarial/): run the browser challenge.
 - [Tamper demo](../scripts/demo.mjs): runs the terminal challenge.
 
-For a different feed or receipt field, follow [Make it yours](../README.md#make-it-yours). A new receipt requires the owner-authorized steps in [Optional Testnet write](../README.md#optional-testnet-write); this wallet-free tutorial does not run them.
+For a different feed or receipt field, follow [How-to](HOW-TO.md#swap-the-price-feed). A new receipt requires the owner-authorized steps in [Optional Testnet write](HOW-TO.md#optional-testnet-write); this wallet-free tutorial does not run them.
