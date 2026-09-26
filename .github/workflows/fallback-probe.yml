@@ -1,0 +1,72 @@
+name: Fallback probe (advisory)
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  fallback-probe:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 35
+    env:
+      PROBE_ROOT: ${{ runner.temp }}/quoteproof-fallback-probe
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+      # Install before blocking api.github.com; no chain or deploy is started.
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+          cache: false
+      - name: Prepare manifest-unavailable environment
+        id: setup
+        run: bash scripts/ci-fallback-probe.sh setup
+      - name: Scaffold with the likely judge command (includes install)
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs scaffold
+      - name: Install only if the CLI did not attempt it
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs install
+      - name: Lint
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs lint
+      - name: Build
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs build
+      - name: Start app (documented development server)
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs start
+      - name: GET /
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs home
+      - name: GET /api/quote/preview?cents=100
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: node scripts/ci-fallback-probe.mjs preview
+      - name: Record selected framework, dependencies and measurements
+        if: always()
+        run: node scripts/ci-fallback-probe.mjs report
+      - name: Restore networking and stop local processes
+        if: always()
+        run: bash scripts/ci-fallback-probe.sh cleanup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fallback-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/quoteproof-fallback-probe/evidence
+          if-no-files-found: warn
