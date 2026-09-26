@@ -35,13 +35,13 @@ for (const match of matches) fs.writeFileSync(`${dir}/${match[1]}.sh`, `${match[
 NODE
 
 echo 'Running marked scaffold command from TUTORIAL.md'
-(cd "$parent" && bash "$scratch/scaffold.sh")
+(cd "$parent" && bash -e "$scratch/scaffold.sh")
 test -f "$parent/quoteproof/packages/hardhat/contracts/QuoteProofRegistry.sol"
 test -f "$parent/quoteproof/package-lock.json"
 test ! -e "$parent/quoteproof/packages/foundry"
 
 echo 'Running marked app-start command from TUTORIAL.md'
-(cd "$parent" && bash "$scratch/start.sh") > "$scratch/server.log" 2>&1 &
+(cd "$parent" && bash -e "$scratch/start.sh") > "$scratch/server.log" 2>&1 &
 server_pid=$!
 ready=false
 for attempt in {1..150}; do
@@ -63,8 +63,8 @@ if [[ "$ready" != true ]]; then
 fi
 
 echo 'Running marked demo and verifier commands from TUTORIAL.md'
-(cd "$parent/quoteproof" && bash "$scratch/demo.sh")
-(cd "$parent/quoteproof" && bash "$scratch/verify.sh")
+(cd "$parent/quoteproof" && bash -e "$scratch/demo.sh")
+(cd "$parent/quoteproof" && bash -e "$scratch/verify.sh")
 
 echo 'Running localhost health and WebKit browser checks'
 BASE_URL='http://127.0.0.1:3001' bash "$root/scripts/ci-judge-health.sh"

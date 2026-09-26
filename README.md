@@ -22,10 +22,10 @@ Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.emai
 From an empty parent directory, scaffold the template:
 
 ```bash
-npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills
+npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills --skip-install
 ```
 
-There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. The creator installs dependencies automatically; `npm ci` below enforces the committed lockfile before starting the app. The `--` forwards the flags to the creator; without it, the CI probes with closed stdin failed with `ERR_TTY_INIT_FAILED` on npm 10 and 11.
+There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. `--skip-install` leaves the template lockfile in place; `npm ci` below installs from it before starting the app. The `--` forwards the flags to the creator; without it, the CI probes with closed stdin failed with `ERR_TTY_INIT_FAILED` on npm 10 and 11.
 
 Then start the wallet-free preview:
 
