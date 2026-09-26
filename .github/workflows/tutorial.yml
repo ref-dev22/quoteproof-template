@@ -26,6 +26,8 @@ jobs:
           node-version: 20.18.3
       - name: Check documentation links
         run: node scripts/ci-check-doc-links.mjs
+      - name: Check documentation prose
+        run: node scripts/ci-check-doc-prose.mjs
       - name: Install CI-only WebKit
         run: |
           npm install --prefix "$RUNNER_TEMP/tutorial-browser" --no-save --no-package-lock playwright@1.63.0
