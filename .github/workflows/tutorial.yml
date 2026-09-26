@@ -1,0 +1,43 @@
+name: Tutorial
+
+on:
+  pull_request:
+    paths:
+      - README.md
+      - AGENTS.md
+      - docs/**
+      - scripts/**
+      - .github/workflows/tutorial.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tutorial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+      - name: Check documentation links
+        run: node scripts/ci-check-doc-links.mjs
+      - name: Install CI-only WebKit
+        run: |
+          npm install --prefix "$RUNNER_TEMP/tutorial-browser" --no-save --no-package-lock playwright@1.63.0
+          "$RUNNER_TEMP/tutorial-browser/node_modules/.bin/playwright" install --with-deps webkit
+      - name: Run marked tutorial commands and localhost checks
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/tutorial-browser/node_modules/playwright
+        run: bash scripts/ci-tutorial.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tutorial-browser-artifacts
+          path: judge-browser-artifacts/
+          if-no-files-found: warn
+          retention-days: 14

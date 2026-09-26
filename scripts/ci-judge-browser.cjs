@@ -7,8 +7,13 @@ const playwrightModule = process.env.PLAYWRIGHT_MODULE;
 if (!playwrightModule) throw new Error("PLAYWRIGHT_MODULE must point to the CI-only Playwright installation");
 const { webkit, devices } = require(playwrightModule);
 
+const baseUrl = (process.env.BASE_URL || "https://quoteproof-judge-preview.vercel.app").replace(/\/$/, "");
+const fourGreenLimitMs = Number(process.env.FOUR_GREEN_LIMIT_MS || 8_000);
+const checkTimeoutMs = Number(process.env.CHECK_TIMEOUT_MS || 15_000);
+if (!Number.isFinite(fourGreenLimitMs) || fourGreenLimitMs <= 0) throw new Error("Invalid FOUR_GREEN_LIMIT_MS");
+if (!Number.isFinite(checkTimeoutMs) || checkTimeoutMs <= 0) throw new Error("Invalid CHECK_TIMEOUT_MS");
 const shareUrl =
-  "https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1";
+  `${baseUrl}/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1`;
 const labels = ["Local consistency", "Recorded state", "Historical oracle", "HCS anchor"];
 const cases = [
   { name: "tinybar", button: "Add 1 tinybar", states: ["error", "neutral", "neutral", "neutral"] },
@@ -31,7 +36,7 @@ function card(page, label) {
   return page.getByText(label, { exact: true }).locator("xpath=..");
 }
 
-async function waitForStates(page, states, timeoutMs = 15_000) {
+async function waitForStates(page, states, timeoutMs = checkTimeoutMs) {
   const deadline = performance.now() + timeoutMs;
   for (;;) {
     const actual = await Promise.all(labels.map(label => card(page, label).getAttribute("data-check-state").catch(() => null)));
@@ -94,7 +99,7 @@ async function runAttempt(browser, theme, attempt) {
       throw error;
     }
     await screenshot(page, theme, "genuine");
-    if (fourGreenMs > 8_000) throw new Error(`Four green checks took ${fourGreenMs}ms, above 8000ms`);
+    if (fourGreenMs > fourGreenLimitMs) throw new Error(`Four green checks took ${fourGreenMs}ms, above ${fourGreenLimitMs}ms`);
     const actualTheme = await page.locator("html").getAttribute("data-theme");
     const prefersDark = await page.evaluate(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
     if (actualTheme !== theme || prefersDark !== (theme === "dark")) {
@@ -135,7 +140,7 @@ async function main() {
   const rows = [
     "## WebKit iPhone judge flow",
     "",
-    "390px iPhone 13 emulation. Public URL; no cookies, tokens, or bypass headers. One retry per theme.",
+    `390px iPhone 13 emulation. Base URL: ${baseUrl}. No cookies, tokens, or bypass headers. One retry per theme. Four-green limit: ${fourGreenLimitMs}ms. Historical checks require the published reference registry.`,
     "",
     "| Theme | Attempt | Four green | Result |",
     "|---|---:|---:|---|",

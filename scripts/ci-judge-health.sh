@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-base_url='https://quoteproof-judge-preview.vercel.app'
+base_url="${BASE_URL:-https://quoteproof-judge-preview.vercel.app}"
+base_url="${base_url%/}"
 historical_tx='0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9'
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 temp_dir="$(mktemp -d)"
@@ -13,7 +14,7 @@ if [[ "$(date -u +%Y%m%d)" -ge 20261020 ]]; then
   exit 0
 fi
 
-printf '## Judge link health\n\nPublic curl only; no cookies, tokens, or bypass headers. Each check gets up to three attempts.\n\n| Check | Result | Detail |\n|---|---|---|\n' >> "$summary"
+printf '## Judge link health\n\nBase URL: `%s`. Plain curl; no cookies, tokens, or bypass headers. Each check gets up to three attempts. The historical receipt checks require the published reference registry, including on a fresh scaffold.\n\n| Check | Result | Detail |\n|---|---|---|\n' "$base_url" >> "$summary"
 
 body_file="$temp_dir/response.json"
 check_detail=''

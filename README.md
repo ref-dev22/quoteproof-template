@@ -5,11 +5,15 @@
 
 A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera Testnet, and gives anyone a receipt to verify the exact Chainlink oracle round used. This Scaffold-HBAR template is for Hedera developers building auditable reference quotes before a wallet write.
 
+Scaffold-HBAR's built-in [`oracles` template](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles) shows how to read Chainlink, Supra and Pyth prices. QuoteProof shows how to prove later, to anyone, which exact price a quote used.
+
 It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. Optional HCS anchoring happens only after the receipt's on-chain event is confirmed. Anyone reads anchors from the public Mirror Node; the trust anchor is the operator account that pays for each anchor message.
 
-[Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1).
+[Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). Once it opens, scroll to **Try to forge this receipt**, change the amount or price, and see which checks catch each forgery.
 
-![QuoteProof badge and four passing read-only checks for the historical receipt in the isolated judge preview](docs/images/historical-four-checks.png)
+<p><img src="docs/images/historical-four-checks.png" width="390" alt="Historical receipt with four passing read-only checks"><img src="docs/images/forge-amount-390.png" width="390" alt="390-pixel phone view of an altered amount caught by the registry and HCS checks"></p>
+
+New here? Follow the [15-minute tutorial](docs/TUTORIAL.md).
 
 ## Start here
 
@@ -18,15 +22,16 @@ Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.emai
 From an empty parent directory, scaffold the template:
 
 ```bash
-npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills
+npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills --skip-install
 ```
 
-There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. The creator installs dependencies automatically. The `--` forwards the flags to the creator; without it, npm may consume them instead.
+There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. `--skip-install` leaves the template lockfile in place; `npm ci` below installs from it before starting the app. The `--` forwards the flags to the creator. Without it, npm keeps the flags for itself, so the creator asks setup questions; in CI without a terminal, npm 10 and 11 stop with `ERR_TTY_INIT_FAILED`.
 
 Then start the wallet-free preview:
 
 ```bash
 cd quoteproof
+npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
@@ -67,6 +72,16 @@ flowchart LR
   G --> V
 ```
 
+## What each check catches
+
+| Forged copy | Local arithmetic | Registry fingerprint | Historical oracle round | HCS anchor |
+| --- | --- | --- | --- | --- |
+| Add 1 tinybar | caught | skipped | skipped | skipped |
+| $1.00 → $10.00, fingerprint recomputed | passes | caught | passes (the price is real) | caught |
+| Double the price, fingerprint recomputed | passes | caught | caught | caught |
+
+A careful forger can satisfy the arithmetic and even use a real oracle price, but cannot match the fingerprint recorded on Hedera or the HCS anchor for the original receipt.
+
 ## Where the pattern lives
 
 - [Registry contract](packages/hardhat/contracts/QuoteProofRegistry.sol): bounds the quote and stores its commitment.
@@ -98,9 +113,14 @@ flowchart LR
 
 - The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
 - The receipt records the exact oracle round so verification compares the historical observation used at recording time, not a later price.
+- The historical receipt stores Chainlink proxy round ID `18446744073709595411` (phase 1, aggregator round 43795). The [compare route](packages/nextjs/app/api/quote/compare/route.ts) calls `getRoundData` on the proxy with that ID, so it reads the same observation after newer rounds exist.
 - The server anchors to HCS only after it confirms a successful transaction with one matching `QuoteRecorded` event, avoiding an anchor for an unconfirmed receipt.
 - A verifier can recompute the receipt, read the historical oracle round and registry commitment, and check the HCS message. Anyone reads anchors from the public Mirror Node; the trust anchor is the operator account that pays for each anchor message.
 - The `93,600`-second (26-hour) reference-demo limit is the [testnet feed's published 24-hour heartbeat](https://reference-data-directory.vercel.app/feeds-hedera-testnet.json) plus a two-hour allowance. The contract rejects older observations; this application policy is not a trading-freshness guarantee.
+
+## Where this pattern fits
+
+Possible uses include USD invoices settled in HBAR, refund or payment disputes, and milestone or escrow releases that depend on a price. QuoteProof records the reference; your payment flow still moves the money.
 
 ## Inspect the historical receipt
 

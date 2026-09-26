@@ -45,6 +45,23 @@ Never paste keys or encrypted keystores into chat, source, browser fields, or co
 
 The published reference context is Hedera Testnet chain `296`, registry `0xa1a741aF6e0A45164e2Af6A1C35dC30275629709`, and Chainlink oracle `0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`. After a credentialed testnet deployment, `generateTsAbis` updates the registry used by Scaffold hooks and QuoteProof routes/UI; restart Next.js and use a receipt from the new deployment. The committed historical fixture remains bound to the published reference registry. Offline consistency is not recorded-state proof: a recomputed amount forgery can match the exact historical oracle observation but must fail the stored-commitment comparison; a false-price copy must fail both. An authentic different receipt can pass its own stored slot but must fail an independently supplied expected-quote reference. Provider errors, unavailable/not-checked historical observations, wrong network, wrong context, missing records, and local receipt errors remain distinct.
 
+## Feature map
+
+| Feature | Starts at | Key files | Verify and gotchas |
+| --- | --- | --- | --- |
+| Preview | UI reference card | `packages/nextjs/components/quoteproof/PreviewRecordCard.tsx`, `packages/nextjs/app/api/quote/preview/route.ts` | `curl 'http://localhost:3001/api/quote/preview?cents=100'`; live feed/RPC can be stale or unavailable. |
+| Guarded record | UI record button | `packages/nextjs/components/quoteproof/PreviewRecordCard.tsx`, `packages/hardhat/contracts/QuoteProofRegistry.sol` | `npm run hardhat:test`; wallet, Testnet and fresh round are required for a write. Use mocks in CI. |
+| Share link and four checks | `?tx=...&hcsTopic=...&hcsSeq=...` | `packages/nextjs/components/quoteproof/ReceiptProofCard.tsx`, `packages/nextjs/app/api/quote/compare/route.ts`, `packages/nextjs/app/api/quote/hcs/verify/route.ts` | `bash scripts/ci-judge-health.sh` with `BASE_URL=http://localhost:3001`; historical checks expect the published reference registry and public RPC/Mirror Node. |
+| Forge simulation | UI **Try to forge this receipt** | `packages/nextjs/components/quoteproof/ForgePanel.tsx`, `packages/nextjs/utils/quoteForge.ts`, `examples/adversarial/` | `npm run hardhat:test` and `node scripts/ci-judge-browser.cjs` with `BASE_URL` and `PLAYWRIGHT_MODULE`; only the published historical receipt shows the controls. |
+| Export and CLI verify | Receipt export / `npm run verify:quote` | `packages/nextjs/components/quoteproof/ReceiptProofCard.tsx`, `packages/hardhat/scripts/verifyQuote.ts`, `packages/hardhat/utils/quoteReceipt.ts` | Run the verifier command in `README.md`; independent expected values matter. RPC comparison is optional. |
+| HCS anchor | `/api/quote/hcs/anchor` | `packages/nextjs/app/api/quote/hcs/anchor/route.ts`, `packages/nextjs/utils/quoteHcs.ts` | `npm run hardhat:test`; server key, bearer token and confirmed event are required; no HCS writes in CI. |
+| Tamper demo | `npm run demo` | `scripts/demo.mjs`, `packages/hardhat/scripts/demoCases.ts`, `examples/adversarial/` | `npm run demo`; local checks work offline and optional network checks can skip. |
+| Health and browser checks | Scheduled workflow or local scripts | `.github/workflows/judge-health.yml`, `scripts/ci-judge-health.sh`, `scripts/ci-judge-browser.cjs` | Set `BASE_URL` for localhost; published-reference checks depend on external RPC/Mirror Node. |
+
+## Verify your change
+
+Run the relevant tests, then `npm run next:dev -- --hostname 0.0.0.0 --port 3001`. Point both API and browser checks at the running app with `BASE_URL=http://localhost:3001 bash scripts/ci-judge-health.sh` and `BASE_URL=http://localhost:3001 PLAYWRIGHT_MODULE=<playwright-install> node scripts/ci-judge-browser.cjs`; inspect the light/dark screenshots in `judge-browser-artifacts/`. The historical checks require the published registry and receipt, so a scaffold using your own new deployment needs its own fixtures.
+
 ## Change guidance
 
 Use the existing Wagmi/Scaffold-HBAR hooks (`useScaffoldReadContract`, `useScaffoldWriteContract`, `useTransactor`) and DaisyUI classes. Keep the write path guarded by a valid preview, connected account, Hedera Testnet, current nonce/round, and single pending transaction. Rejection, wrong-network, pending, duplicate-click, stale, changed-round, and unavailable-feed paths must never trigger an automatic retry or a second live write; use deterministic mocks/fixtures for additional coverage.
