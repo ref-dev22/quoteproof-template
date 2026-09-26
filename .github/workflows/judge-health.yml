@@ -30,3 +30,42 @@ jobs:
         env:
           SIMULATE_FAILURE: ${{ github.event.inputs.simulate_failure || 'false' }}
         run: bash scripts/ci-judge-health.sh
+
+  judge-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check judging window
+        id: window
+        run: |
+          if [[ "$(date -u +%Y%m%d)" -ge 20261020 ]]; then
+            echo 'active=false' >> "$GITHUB_OUTPUT"
+            echo 'Browser check skipped: judging ended on 16 Oct 2026.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'active=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.window.outputs.active == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        if: steps.window.outputs.active == 'true'
+        with:
+          node-version: 20.18.3
+      - name: Install pinned Playwright WebKit in runner temp
+        if: steps.window.outputs.active == 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/judge-browser" --no-save --no-package-lock playwright@1.63.0
+          "$RUNNER_TEMP/judge-browser/node_modules/.bin/playwright" install --with-deps webkit
+      - name: Check the public iPhone flow in WebKit
+        if: steps.window.outputs.active == 'true'
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/judge-browser/node_modules/playwright
+        run: node scripts/ci-judge-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.window.outputs.active == 'true' }}
+        with:
+          name: judge-browser-webkit-iphone
+          path: judge-browser-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
