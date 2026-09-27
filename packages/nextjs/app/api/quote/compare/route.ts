@@ -8,7 +8,9 @@ import {
   QUOTE_PROOF_ORACLE_ADDRESS,
   QUOTE_PROOF_TESTNET_CHAIN_ID,
   getQuoteProofRegistryAddress,
+  quoteProofRegistryAbi,
 } from "../../../../contracts/quoteProofContext";
+import { BoundedBodyError, readBoundedBody } from "../../../../utils/boundedBody";
 import { type Hex, decodeFunctionResult, encodeFunctionData } from "viem";
 
 const RPC_URL = process.env.NEXT_PUBLIC_HEDERA_TESTNET_RPC_URL || "https://testnet.hashio.io/api";
@@ -16,33 +18,6 @@ const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
 const MAX_REQUEST_BYTES = 64 * 1024;
 const MAX_RPC_RESPONSE_BYTES = 64 * 1024;
 const RPC_TIMEOUT_MS = 5_000;
-
-const getCommitmentAbi = [
-  {
-    type: "function",
-    name: "getCommitment",
-    stateMutability: "view",
-    inputs: [
-      { name: "issuer", type: "address" },
-      { name: "nonce", type: "uint256" },
-    ],
-    outputs: [{ name: "commitment", type: "bytes32" }],
-  },
-] as const;
-
-const isStoredCommitmentAbi = [
-  {
-    type: "function",
-    name: "isStoredCommitment",
-    stateMutability: "view",
-    inputs: [
-      { name: "issuer", type: "address" },
-      { name: "nonce", type: "uint256" },
-      { name: "commitment", type: "bytes32" },
-    ],
-    outputs: [{ name: "stored", type: "bool" }],
-  },
-] as const;
 
 const getRoundDataAbi = [
   {
@@ -93,53 +68,6 @@ type ComparisonResponse = {
   context: { chainId: string; registry: string; oracle: string };
 };
 
-class RequestTooLargeError extends Error {}
-
-async function readRequestBody(request: Request): Promise<string> {
-  const contentLength = request.headers.get("content-length");
-  if (contentLength !== null) {
-    const declaredLength = Number(contentLength);
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
-      throw new RequestTooLargeError(`request body exceeds ${MAX_REQUEST_BYTES} bytes`);
-    }
-  }
-
-  if (!request.body) {
-    const body = await request.text();
-    if (new TextEncoder().encode(body).byteLength > MAX_REQUEST_BYTES) {
-      throw new RequestTooLargeError(`request body exceeds ${MAX_REQUEST_BYTES} bytes`);
-    }
-    return body;
-  }
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_REQUEST_BYTES) {
-        await reader.cancel();
-        throw new RequestTooLargeError(`request body exceeds ${MAX_REQUEST_BYTES} bytes`);
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-
-  const body = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(body);
-}
-
 function contextMismatch(errors: string[]): boolean {
   return errors.some(error =>
     /unexpected chainId|registry does not match the configured deployment|oracle does not match the configured provider/i.test(
@@ -172,36 +100,11 @@ async function rpcRequest<T>(method: string, params: unknown[], id: number): Pro
       cache: "no-store",
       signal: controller.signal,
     });
-    const contentLength = Number(response.headers.get("content-length"));
-    if (Number.isFinite(contentLength) && contentLength > MAX_RPC_RESPONSE_BYTES) {
-      throw new Error(`RPC response exceeds ${MAX_RPC_RESPONSE_BYTES} bytes`);
-    }
     if (!response.body) throw new Error("Reference provider returned an empty response");
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-        totalBytes += value.byteLength;
-        if (totalBytes > MAX_RPC_RESPONSE_BYTES) {
-          await reader.cancel();
-          throw new Error(`RPC response exceeds ${MAX_RPC_RESPONSE_BYTES} bytes`);
-        }
-        chunks.push(value);
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    const bytes = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    const payload = JSON.parse(new TextDecoder().decode(bytes)) as { result?: T; error?: { message?: string } };
+    const payload = JSON.parse(await readBoundedBody(response, MAX_RPC_RESPONSE_BYTES)) as {
+      result?: T;
+      error?: { message?: string };
+    };
     if (!response.ok || payload.error || payload.result === undefined) {
       throw new Error(payload.error?.message || "Reference provider failed");
     }
@@ -238,11 +141,11 @@ export async function POST(request: Request) {
   const registry = getQuoteProofRegistryAddress();
   let receipt: QuoteReceiptJson;
   try {
-    const body = JSON.parse(await readRequestBody(request)) as { receipt?: unknown };
+    const body = JSON.parse(await readBoundedBody(request, MAX_REQUEST_BYTES)) as { receipt?: unknown };
     if (body.receipt === undefined) throw new Error("receipt is required");
     receipt = parseReceiptJson(JSON.stringify(body.receipt));
   } catch (error) {
-    if (error instanceof RequestTooLargeError) {
+    if (error instanceof BoundedBodyError && error.status === 413) {
       return Response.json({ error: error.message }, { status: 413 });
     }
     return Response.json(
@@ -287,11 +190,11 @@ export async function POST(request: Request) {
     const nonce = BigInt(receipt.nonce);
     const storedRaw = await rpcCall(
       registry,
-      encodeFunctionData({ abi: getCommitmentAbi, functionName: "getCommitment", args: [issuer, nonce] }),
+      encodeFunctionData({ abi: quoteProofRegistryAbi, functionName: "getCommitment", args: [issuer, nonce] }),
       1,
     );
     const storedCommitment = decodeFunctionResult({
-      abi: getCommitmentAbi,
+      abi: quoteProofRegistryAbi,
       functionName: "getCommitment",
       data: storedRaw,
     }) as Hex;
@@ -300,14 +203,14 @@ export async function POST(request: Request) {
     const storedCheckRaw = await rpcCall(
       registry,
       encodeFunctionData({
-        abi: isStoredCommitmentAbi,
+        abi: quoteProofRegistryAbi,
         functionName: "isStoredCommitment",
         args: [issuer, nonce, storedCommitment],
       }),
       2,
     );
     const storedCheck = decodeFunctionResult({
-      abi: isStoredCommitmentAbi,
+      abi: quoteProofRegistryAbi,
       functionName: "isStoredCommitment",
       data: storedCheckRaw,
     }) as boolean;

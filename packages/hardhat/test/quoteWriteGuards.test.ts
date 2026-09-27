@@ -16,8 +16,8 @@ async function attemptWrite(state: QuoteWriteGuardState, write: () => Promise<vo
   await write();
 }
 
-describe("mocked wallet write guards", function () {
-  it("allows exactly one ready write and blocks wrong-network, pending and duplicate states", async function () {
+describe("canWriteQuote guard function and write error mapping", function () {
+  it("allows the ready state and blocks wrong-network, pending and duplicate states", async function () {
     let calls = 0;
     const write = async () => {
       calls += 1;
@@ -34,7 +34,7 @@ describe("mocked wallet write guards", function () {
     expect(canWriteQuote({ ...readyState, hasTxHash: true })).to.equal(false);
   });
 
-  it("maps a mocked signature rejection without retrying", async function () {
+  it("maps a signature rejection from one guarded write attempt", async function () {
     let calls = 0;
     const write = async () => {
       calls += 1;

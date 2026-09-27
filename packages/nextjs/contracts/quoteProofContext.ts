@@ -2,6 +2,7 @@ import deployedContracts from "./deployedContracts";
 import type { Hex } from "viem";
 
 export const QUOTE_PROOF_TESTNET_CHAIN_ID = 296n;
+export const quoteProofRegistryAbi = deployedContracts[296].QuoteProofRegistry.abi;
 
 // Deployment generation updates this address alongside the Scaffold contract hooks.
 export function getQuoteProofRegistryAddress(): Hex {
