@@ -62,11 +62,8 @@ function assertPatchFootprint() {
   }
 }
 
-function applyPatch(include) {
-  const args = ["apply"];
-  if (include) args.push(`--include=${include}`);
-  args.push(patch);
-  run("git", args, checkout, { inherit: true });
+function applyPatch() {
+  run("git", ["apply", patch], checkout, { inherit: true });
 }
 
 function assertExpectedMismatch() {

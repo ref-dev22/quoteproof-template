@@ -5,44 +5,13 @@ import { type Hex, formatUnits } from "viem";
 import { hederaTestnet } from "viem/chains";
 import { getQuoteProofRegistryAddress } from "~~/contracts/quoteProofContext";
 
+export { quoteRecordedAbi } from "~~/utils/quoteHcs";
+
 export const TESTNET_CHAIN_ID = hederaTestnet.id;
 export const MAX_CENTS = 100_000_000n;
 export const REGISTRY_ADDRESS = getQuoteProofRegistryAddress();
 export const HISTORICAL_TX = "0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9";
 export const HAS_REFERENCE_REGISTRY = REGISTRY_ADDRESS.toLowerCase() === referenceReceipt.registry.toLowerCase();
-
-export const quoteRecordedAbi = [
-  {
-    type: "event",
-    name: "QuoteRecorded",
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: "commitment", type: "bytes32" },
-      {
-        indexed: false,
-        name: "quote",
-        type: "tuple",
-        components: [
-          { name: "schemaVersion", type: "uint256" },
-          { name: "chainId", type: "uint256" },
-          { name: "registry", type: "address" },
-          { name: "issuer", type: "address" },
-          { name: "nonce", type: "uint256" },
-          { name: "cents", type: "uint256" },
-          { name: "oracle", type: "address" },
-          { name: "feedId", type: "bytes32" },
-          { name: "roundId", type: "uint80" },
-          { name: "price", type: "uint256" },
-          { name: "decimals", type: "uint8" },
-          { name: "observedAt", type: "uint256" },
-          { name: "recordedAt", type: "uint256" },
-          { name: "maximumAge", type: "uint256" },
-          { name: "tinybars", type: "uint256" },
-        ],
-      },
-    ],
-  },
-] as const;
 
 export type PreviewQuote = readonly [bigint, bigint, bigint, bigint, bigint, bigint];
 

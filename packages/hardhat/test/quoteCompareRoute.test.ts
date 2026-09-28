@@ -105,6 +105,42 @@ describe("quote comparison route guards", function () {
     globalThis.fetch = originalFetch;
   });
 
+  for (const { field, value, error } of [
+    { field: "chainId", value: "295", error: "unexpected chainId" },
+    {
+      field: "registry",
+      value: "0x1111111111111111111111111111111111111111",
+      error: "registry does not match the configured deployment",
+    },
+    {
+      field: "oracle",
+      value: "0x2222222222222222222222222222222222222222",
+      error: "oracle does not match the configured provider",
+    },
+  ] as const) {
+    it(`maps a wrong ${field} to wrong_context without RPC calls`, async function () {
+      const receipt = { ...makeReceipt(), [field]: value };
+      receipt.commitment = computeReceiptCommitment(receipt);
+      const methods: string[] = [];
+      globalThis.fetch = (async (_input, init) => {
+        methods.push(JSON.parse(String(init?.body)).method);
+        throw new Error("RPC must not be reached");
+      }) as typeof fetch;
+
+      const response = await POST(requestWithBody(JSON.stringify({ receipt })));
+      const payload = (await response.json()) as {
+        localConsistency: { status: string; errors: string[] };
+        recordedComparison: { status: string };
+      };
+
+      expect(response.status).to.equal(200);
+      expect(payload.localConsistency.status).to.equal("wrong_context");
+      expect(payload.localConsistency.errors.some(item => item.includes(error))).to.equal(true);
+      expect(payload.recordedComparison.status).to.equal("wrong_context");
+      expect(methods).to.deep.equal([]);
+    });
+  }
+
   it("rejects a wrong RPC network before calling registry getters", async function () {
     const methods: string[] = [];
     globalThis.fetch = (async (_input, init) => {
@@ -311,7 +347,7 @@ describe("quote comparison route guards", function () {
     };
     expect(payload.localConsistency.status).to.equal("valid");
     expect(payload.recordedComparison.status).to.equal("provider_error");
-    expect(payload.recordedComparison.error).to.include("RPC response exceeds");
+    expect(payload.recordedComparison.error).to.include("Body too large");
   });
 
   it("returns 413 for a chunked oversized wrapper before JSON parsing", async function () {
@@ -341,7 +377,27 @@ describe("quote comparison route guards", function () {
 
     const response = await POST(request);
     expect(response.status).to.equal(413);
-    expect(await response.json()).to.deep.equal({ error: "request body exceeds 65536 bytes" });
+    expect(await response.json()).to.deep.equal({ error: "Body too large" });
+    expect(methods).to.deep.equal([]);
+  });
+
+  it("returns 400 for a malformed Content-Length before reading the receipt", async function () {
+    const methods: string[] = [];
+    globalThis.fetch = (async (_input, init) => {
+      methods.push(JSON.parse(String(init?.body)).method);
+      throw new Error("RPC must not be reached");
+    }) as typeof fetch;
+
+    const response = await POST(
+      requestWithBody(JSON.stringify({ receipt: makeReceipt() }), {
+        "content-type": "application/json",
+        "content-length": "abc",
+      }),
+    );
+    const payload = (await response.json()) as { localConsistency: { status: string; errors: string[] } };
+    expect(response.status).to.equal(400);
+    expect(payload.localConsistency.status).to.equal("invalid");
+    expect(payload.localConsistency.errors).to.include("Invalid Content-Length");
     expect(methods).to.deep.equal([]);
   });
 });

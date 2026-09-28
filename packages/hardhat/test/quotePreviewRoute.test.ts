@@ -137,7 +137,7 @@ describe("quote preview route guards", function () {
 
     const response = await GET(request("100"));
     expect(response.status).to.equal(502);
-    expect(await response.json()).to.deep.equal({ error: "RPC response exceeds 65536 bytes" });
+    expect(await response.json()).to.deep.equal({ error: "Body too large" });
     expect(methods).to.deep.equal(["eth_chainId", "eth_call"]);
   });
 });
