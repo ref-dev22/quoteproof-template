@@ -1,5 +1,34 @@
 # How-to guides
 
+## Start the preview
+
+The preview and deterministic tests need no wallet, faucet funds, private key, paid API, Docker or database.
+No environment variables are required for the historical receipt; see [environment variables](REFERENCE.md#environment-variables) for your own deployment.
+The start flags select port 3001 and listen on all interfaces.
+
+For a non-interactive alternative to [Start here](../README.md#start-here), use the flagged creator command and install from the committed lockfile:
+
+```bash
+npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
+cd quoteproof
+npm ci
+npm run next:dev -- --hostname 0.0.0.0 --port 3001
+```
+
+Open `http://localhost:3001` and check the reference card for a price, round, observation age and quantity.
+`Loading reference…` appears during the first fetch; `Reference unavailable or stale` follows a failed fetch or stale observation.
+For first-load delays, see [Troubleshoot](#troubleshoot).
+
+For a direct read-only check while the app is running:
+
+```bash
+curl -i "http://localhost:3001/api/quote/preview?cents=100"
+```
+
+Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `observedAt` and `tinybars` fields.
+HTTP `400` means invalid cents; `502` means the reference RPC is unavailable.
+This endpoint reads a live source, so it is wallet-free but not an offline test.
+
 ## Inspect the historical receipt
 
 Run `npm run demo` to compare the genuine receipt and prepared forgeries.
@@ -18,7 +47,7 @@ That command runs from the repository root; its workspace resolves `../../exampl
 
 ## Develop and test
 
-Use the committed npm lockfile. From the repository root:
+Use the committed `package-lock.json`. From the repository root:
 
 ```bash
 npm ci
@@ -31,12 +60,13 @@ npm run next:lint
 npm run next:build
 ```
 
-For documentation changes, run the [link and anchor check](../scripts/ci-check-doc-links.mjs), [guardrail tests](../scripts/doc-checks.test.mjs), and [prose check](../scripts/ci-check-doc-prose.mjs):
+For documentation changes, run the [link and anchor check](../scripts/ci-check-doc-links.mjs), [guardrail tests](../scripts/doc-checks.test.mjs), [prose check](../scripts/ci-check-doc-prose.mjs), and [scaffold text check](../scripts/check-scaffold-text.mjs):
 
 ```bash
 node scripts/ci-check-doc-links.mjs
 node --test scripts/doc-checks.test.mjs
 node scripts/ci-check-doc-prose.mjs
+node scripts/check-scaffold-text.mjs
 ```
 
 The link check covers the README, AGENTS and every `docs/*.md` file.
@@ -45,6 +75,8 @@ Use `--local-only` on the link check for an offline run.
 The prose check covers the README and `docs/*.md`; it rejects the vocabulary listed in [doc-checks.mjs](../scripts/doc-checks.mjs).
 Code examples and URL destinations are excluded from prose checks.
 Longest-sentence counts are informational.
+The scaffold text check replays creator 0.4.1's conversion across tracked text files, including itself.
+Only the exact README and Tutorial scaffold-command lines are exempt; workflow commands have no exemptions.
 
 ### Policy workshop
 
@@ -132,10 +164,17 @@ Hosting does not create a registry or receipt.
 
 ## Troubleshoot
 
+The [Start here](../README.md#start-here) flags select the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills without questions, even if GitHub rate-limits the template-settings lookup.
+`--skip-install` preserves the template lockfile; `npm ci` installs from it.
+The `--` separator forwards flags to the creator.
+Without it, the package manager keeps the flags and the creator asks setup questions; versions 10 and 11 of npm, in CI without a terminal, stop with `ERR_TTY_INIT_FAILED`.
+The [Start-here check](../scripts/ci-readme-start-here.sh) exercises these cases.
+
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Scaffold stops for missing Git identity | The creator needs Git `user.name` and `user.email`. | Set both with `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"`; retry in an empty parent directory. [Tutorial](TUTORIAL.md#1-scaffold-and-start). |
-| `Dependency installation failed (exit code N).` or `packages/foundry` instead of `packages/hardhat` after a template-settings lookup failure | Creator fallback defect: unreadable `template.json` lets an unpinned `--ci` command select Foundry and Yarn defaults, incompatible with this template; [closed PR #20](https://github.com/ref-dev22/quoteproof-template/pull/20) measured this failure and found both workspace directories absent. | Delete that failed scaffold folder and run the fully flagged command in [Start here](../README.md#start-here). Keep every flag; the [manifest-unavailable check](../scripts/ci-readme-start-here.sh) exercises that command. |
+| Scaffold asks questions or stops with `ERR_TTY_INIT_FAILED` | The command omitted the `--` separator. | Copy the complete [Start here](../README.md#start-here) command, including the separator and every flag. |
+| Scaffold stops for missing Git identity | The creator needs Git `user.name` and `user.email`. | `git config user.name` and `git config user.email` must both print a value. Set both with `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"`; retry in an empty parent directory. [Tutorial](TUTORIAL.md#1-scaffold-and-start). |
+| `Dependency installation failed (exit code N).` or `packages/foundry` instead of `packages/hardhat` after a template-settings lookup failure | Creator fallback defect: unreadable `template.json` lets an unpinned `--ci` command select the creator's own defaults, incompatible with this template; [closed PR #20](https://github.com/ref-dev22/quoteproof-template/pull/20) measured this failure and found both workspace directories absent. | Delete that failed scaffold folder and run the fully flagged command in [Start here](../README.md#start-here). Keep every flag; the [manifest-unavailable check](../scripts/ci-readme-start-here.sh) exercises that command. |
 | `Failed to download <url>: <status> <statusText>` with a GitHub rate-limit response (`403` or `429`) | The template archive download is rate-limited; this is separate from the settings-lookup defect measured in [PR #20](https://github.com/ref-dev22/quoteproof-template/pull/20). | Wait for the limit to reset or set `GIGET_AUTH` to a GitHub token for authenticated downloads; see [GitHub rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api#exceeding-the-rate-limit) and [giget authentication](https://github.com/unjs/giget/tree/v1.2.5#providing-token-for-private-repositories). |
 | Port 3001 is in use | Another server owns that port. | Stop that server or choose another `--port`; update local URLs too. [Start command](../README.md#start-here). |
 | Page still loads for minutes after `Ready` | Next compiles the app on the first page load. | Wait for `Compiled /`; a fresh Windows 10 run took about 3½ minutes from server start. Later loads take seconds. |

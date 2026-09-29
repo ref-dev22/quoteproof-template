@@ -10,7 +10,7 @@ From an empty parent directory, run the same command as [Start here](../README.m
 npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills --skip-install
 ```
 
-You should see a `quoteproof` directory with `packages/hardhat/contracts/QuoteProofRegistry.sol`. Dependencies are installed in the next step with `npm ci`. If Git identity is missing, set `git config --global user.name` and `git config --global user.email`, then retry in an empty parent directory. If the GitHub template lookup is rate-limited, keep every flag above; they pin Hardhat and npm even when the manifest cannot be read.
+You should see a `quoteproof` directory with `packages/hardhat/contracts/QuoteProofRegistry.sol`. Dependencies are installed in the next step with `npm ci`. If Git identity is missing, set `git config --global user.name` and `git config --global user.email`, then retry in an empty parent directory. If the GitHub template lookup is rate-limited, keep every flag above; they pin Hardhat and the package manager even when the manifest cannot be read.
 
 ```bash tutorial:start
 cd quoteproof

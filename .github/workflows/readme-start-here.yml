@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   readme-start-here:
+    if: github.repository == 'ref-dev22/quoteproof-template'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -34,6 +35,7 @@ jobs:
         run: bash scripts/ci-readme-start-here.sh normal
 
   readme-start-here-manifest-unavailable:
+    if: github.repository == 'ref-dev22/quoteproof-template'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
