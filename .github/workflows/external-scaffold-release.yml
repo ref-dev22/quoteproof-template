@@ -94,7 +94,7 @@ jobs:
           set -euo pipefail
           step_started=$SECONDS
           trap 'printf "CI_TIMING scaffold=%ds\n" "$((SECONDS - step_started))"' EXIT
-          npx --yes create-scaffold-hbar@0.4.0 app \
+          npx --yes create-scaffold-hbar@0.4.1 app \
             --template "$TEMPLATE_REPOSITORY#$IMPLEMENTATION_REF" \
             --frontend nextjs-app \
             --solidity-framework hardhat \
@@ -272,7 +272,7 @@ jobs:
           fi
           mkdir -p "$temp_root/quoteproof-default-install"
           cd "$temp_root/quoteproof-default-install"
-          npx --yes create-scaffold-hbar@0.4.0 app \
+          npx --yes create-scaffold-hbar@0.4.1 app \
             --template "$GITHUB_REPOSITORY#$IMPLEMENTATION_REF" \
             --frontend nextjs-app \
             --solidity-framework hardhat \

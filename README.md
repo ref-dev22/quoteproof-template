@@ -19,6 +19,8 @@ New here? Follow the [15-minute tutorial](docs/TUTORIAL.md).
 
 Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
 
+`git config user.name` and `git config user.email` must both print a value, or the creator stops.
+
 From an empty parent directory, scaffold the template:
 
 ```bash
@@ -48,7 +50,7 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3001`. Check the reference card for a price, round, observation age and quantity. `Loading reference…` appears during the first fetch; `Reference unavailable or stale` appears after a failed fetch or stale observation.
+Open `http://localhost:3001`. After Next prints `Ready`, the first page load still compiles the app, so wait for `Compiled /` (about 3½ minutes from start on a fresh Windows 10 machine). Later loads take seconds; the first local check can take about 30 seconds while API routes compile. Check the reference card for a price, round, observation age and quantity. `Loading reference…` appears during the first fetch; `Reference unavailable or stale` appears after a failed fetch or stale observation.
 
 For a direct read-only check while the app is running:
 
