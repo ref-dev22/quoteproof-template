@@ -1,4 +1,4 @@
-# Your first verifiable receipt
+# Your first verifiable receipt in 15 minutes
 
 This walkthrough uses a published Hedera Testnet receipt. You need Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` set. You do not need a wallet or Testnet funds.
 

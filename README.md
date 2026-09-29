@@ -13,7 +13,7 @@ It does more than read a price feed: anyone can verify a receipt later down to t
 
 <p><img src="docs/images/historical-four-checks.png" width="390" alt="Historical receipt with four passing read-only checks"><img src="docs/images/forge-amount-390.png" width="390" alt="390-pixel phone view of an altered amount caught by the registry and HCS checks"></p>
 
-New here? Follow the [first-receipt tutorial](docs/TUTORIAL.md).
+New here? Follow the [15-minute tutorial](docs/TUTORIAL.md).
 
 ## Start here
 
