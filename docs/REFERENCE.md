@@ -152,7 +152,7 @@ In [demoCases.ts](../packages/hardhat/scripts/demoCases.ts), `DEMO_FIXTURES_DIR`
 - [Release evidence](release-evidence.md): revision-specific checks and hosted-preview provenance.
 - [MIT license](../LICENSE): license and upstream notice.
 
-## npm scripts
+## Package scripts
 
 The tables below are transcribed from the three package manifests.
 Root commands use `npm run <name>`; workspace commands use `npm run <name> -w <package> -- <arguments>`.

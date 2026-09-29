@@ -2,6 +2,11 @@
 
 ## Why this design
 
+Scaffold-HBAR's built-in [`oracles` template](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles) shows how to read Chainlink, Supra and Pyth prices.
+QuoteProof shows how to prove later which exact price a quote used.
+Its four-check workflow teaches oracle provenance, on-chain fingerprints, public HCS records and verification with adversarial examples.
+A locally consistent JSON receipt alone does not prove what was recorded.
+
 Sources: [registry](../packages/hardhat/contracts/QuoteProofRegistry.sol), [receipt verifier](../packages/hardhat/utils/quoteReceipt.ts), [historical fixture](../examples/receipt-testnet.json), and [anchor route](../packages/nextjs/app/api/quote/hcs/anchor/route.ts).
 
 - The registry stores a `keccak256` fingerprint per issuer and nonce to keep contract state compact. The event carries the quote fields, and a verifier recomputes the fingerprint from them.
@@ -80,6 +85,8 @@ Anchoring the same receipt twice creates two HCS messages; the [anchor route](..
 
 ## Security notes
 
-- The [25 September 2026 audit](security.md) reported high-severity advisories in dependencies used by the Scaffold-HBAR starter and the optional Hiero SDK integration. On that date, the installed SDK matched the latest npm release checked; npm also suggested a Next.js major upgrade, an older Hedera proto package, and a different burner-wallet version. Those proposed changes have not been validated with this template, so they were not applied.
+Inspect the code and dependency advisories before adapting this AI-assisted implementation; the documented checks are reproducible.
+
+- The [25 September 2026 audit](security.md) reported high-severity advisories in dependencies used by the Scaffold-HBAR starter and the optional Hiero SDK integration. On that date, the installed SDK matched the latest release checked on npm; the audit also suggested a Next.js major upgrade, an older Hedera proto package, and a different burner-wallet version. Those proposed changes have not been validated with this template, so they were not applied.
 - QuoteProof loads the Hiero SDK for optional HCS anchoring and its operator-key checks. The anchor route requires a bearer token, validates the receipt and its on-chain event, and submits an anchor with a fixed set of fields. The audit does not establish exploitability through QuoteProof's routes. See the [dated audit](security.md) for the findings and exact versions.
-- Run `npm audit --omit=dev` yourself and review the advisories before any production use.
+- Run npm's `audit` command with `--omit=dev` yourself and review the advisories before any production use.

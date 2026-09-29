@@ -1,15 +1,8 @@
 # QuoteProof — reference-quote receipts on Hedera
 
-[![CI](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml/badge.svg?branch=main)](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml)
-[![External scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml/badge.svg)](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml)
+QuoteProof is a template for developers building USD quotes in HBAR on Hedera Testnet. It records the price used so anyone can check a receipt later.
 
-A shop quotes $1.00 in USD, records the corresponding HBAR reference on Hedera Testnet, and gives anyone a receipt to verify the exact Chainlink oracle round used. This Scaffold-HBAR template is for Hedera developers building auditable reference quotes before a wallet write.
-
-Scaffold-HBAR's built-in [`oracles` template](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles) shows how to read Chainlink, Supra and Pyth prices. QuoteProof shows how to prove later, to anyone, which exact price a quote used.
-
-It does more than read a price feed: anyone can verify a receipt later down to the exact oracle round, without a wallet, key, Docker or database. The registry records which wallet issued each receipt. HCS adds an independent, consensus-timestamped record from the operator account, written only after the on-chain event confirms. Anyone can read it from the Mirror Node without an EVM node. The live receipt is already anchored; anchoring is optional in your own copy.
-
-[Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt with its HCS anchor](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). Once it opens, scroll to **Try to forge this receipt**, change the amount or price, and see which checks catch each forgery.
+[Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). Scroll to **Try to forge this receipt** to see which checks catch an altered amount or price.
 
 <p><img src="docs/images/historical-four-checks.png" width="390" alt="Historical receipt with four passing read-only checks"><img src="docs/images/forge-amount-390.png" width="390" alt="390-pixel phone view of an altered amount caught by the registry and HCS checks"></p>
 
@@ -17,21 +10,17 @@ New here? Follow the [15-minute tutorial](docs/TUTORIAL.md).
 
 ## Start here
 
-Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured. Previewing and running deterministic tests need no wallet, faucet funds, private key, or paid API.
+Prerequisites: Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` configured.
 
-`git config user.name` and `git config user.email` must both print a value, or the creator stops.
-
-From an empty parent directory, scaffold the template:
+From an empty parent directory:
 
 ```bash
 npm create scaffold-hbar@latest -- quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager npm --skip-hedera-skills --skip-install
 ```
 
-There are no questions: the flags pin the `quoteproof` name, Next.js, Testnet, Hardhat, npm, and no Hedera Skills, keeping the scaffold correct if GitHub rate-limits the CLI's template lookup. `--skip-install` leaves the template lockfile in place; `npm ci` below installs from it before starting the app. The `--` forwards the flags to the creator. Without it, npm keeps the flags for itself, so the creator asks setup questions; in CI without a terminal, npm 10 and 11 stop with `ERR_TTY_INIT_FAILED`.
+For setup errors, flag forwarding or download limits, see [Troubleshoot](docs/HOW-TO.md#troubleshoot).
 
-Used a different scaffold command? If you saw `Dependency installation failed`, or got `packages/foundry` instead of `packages/hardhat`, the creator couldn't read this template's settings and fell back to its defaults. Delete that folder and run the command above. If the download itself fails with a GitHub rate-limit error (`403` or `429`), wait for the limit to reset or set `GIGET_AUTH` to a GitHub token. Details: [Troubleshoot](docs/HOW-TO.md#troubleshoot).
-
-Then start the wallet-free preview:
+Start the preview:
 
 ```bash
 cd quoteproof
@@ -39,33 +28,13 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-The flags select port 3001 and listen on all interfaces.
-
-For a non-interactive alternative, use the flagged creator command and install from the committed lockfile:
-
-```bash
-npx create-scaffold-hbar@latest quoteproof --template ref-dev22/quoteproof-template --frontend nextjs-app --solidity-framework hardhat --network testnet --package-manager "npm" --ci --skip-hedera-skills --skip-install
-cd quoteproof
-npm ci
-npm run next:dev -- --hostname 0.0.0.0 --port 3001
-```
-
-Open `http://localhost:3001`. After Next prints `Ready`, the first page load still compiles the app, so wait for `Compiled /` (about 3½ minutes from start on a fresh Windows 10 machine). Later loads take seconds; the first local check can take about 30 seconds while API routes compile. Check the reference card for a price, round, observation age and quantity. `Loading reference…` appears during the first fetch; `Reference unavailable or stale` appears after a failed fetch or stale observation.
-
-For a direct read-only check while the app is running:
-
-```bash
-curl -i "http://localhost:3001/api/quote/preview?cents=100"
-```
-
-Expect HTTP `200` with decimal-string `nonce`, `roundId`, `price`, `decimals`, `observedAt` and `tinybars` fields. HTTP `400` means invalid cents; `502` means the reference RPC is unavailable. This endpoint reads a live source, so it is wallet-free but not an offline test.
+Open `http://localhost:3001`; the first page load compiles the app.
+No wallet, funds or environment variables are needed for this preview.
+See [environment settings](docs/REFERENCE.md#environment-variables) and [Testnet setup](docs/HOW-TO.md#record-a-new-receipt-on-testnet) for your own deployment.
 
 ## How it works
 
-1. Preview a bounded USD-to-HBAR reference from the configured Chainlink feed.
-2. Record an event-bound receipt with a connected Testnet wallet.
-3. Verify the receipt later against its arithmetic, historical oracle round and stored registry commitment.
-4. Optionally anchor the receipt to an HCS topic; anyone can read it back from the Mirror Node and verify it.
+The registry stores a quote's fingerprint and emits its fields, including the Chainlink round. Readers check the receipt's arithmetic, stored fingerprint and historical price. Optional HCS anchoring adds an operator record after confirmation, readable through the Mirror Node. The live receipt is anchored.
 
 ```mermaid
 flowchart LR
@@ -84,8 +53,6 @@ flowchart LR
 | $1.00 → $10.00, fingerprint recomputed | passes | caught | passes (the price is real) | caught |
 | Double the price, fingerprint recomputed | passes | caught | caught | caught |
 
-A careful forger can satisfy the arithmetic and even use a real oracle price, but cannot match the fingerprint recorded on Hedera or the HCS anchor for the original receipt.
-
 ## Hedera and ecosystem pieces
 
 | Piece | What QuoteProof uses it for | Code link |
@@ -98,27 +65,15 @@ A careful forger can satisfy the arithmetic and even use a real oracle price, bu
 
 ## Docs map
 
-- **Tutorial:** [Your first verifiable receipt](docs/TUTORIAL.md).
-- **How-to:** [Adapt, develop, record, host and troubleshoot](docs/HOW-TO.md).
-- **Reference:** [API, receipt, CLI, contract, scripts and environment](docs/REFERENCE.md).
-- **Explanation:** [Design, trust model and limits](docs/EXPLANATION.md). [All docs](docs/README.md).
-
-## What you'll learn
-
-- Oracle provenance: record which Chainlink round a price came from so anyone can check that observation later, rather than relying on the latest price.
-- On-chain fingerprints: hash the quote fields into a commitment stored on Hedera, emit those fields in `QuoteRecorded`, and recompute the hash to check them.
-- A public audit trail with HCS: optionally anchor a receipt to a topic protected by a server-held submit key; anyone can read the message from the Mirror Node without a key.
-- Verification you can test: adversarial cases show why a well-formed JSON file is not proof on its own.
+- [Tutorial](docs/TUTORIAL.md): run the receipt and forgery checks.
+- [How-to](docs/HOW-TO.md): adapt, test, record and troubleshoot.
+- [Reference](docs/REFERENCE.md): API, fields, scripts and environment.
+- [Explanation](docs/EXPLANATION.md): design, trust and limits. [All docs](docs/README.md).
 
 ## Live evidence
 
-| Item | Hedera Testnet evidence |
-| --- | --- |
-| Registry contract | [QuoteProofRegistry `0.0.10645852`](https://hashscan.io/testnet/contract/0xa1a741aF6e0A45164e2Af6A1C35dC30275629709) |
-| Historical receipt transaction | [Confirmed contract call](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) |
-| HCS topic `0.0.10698279` | [Topic and submit key](https://hashscan.io/testnet/topic/0.0.10698279) |
-| HCS message 1 | [Confirmed message submission](https://hashscan.io/testnet/transaction/1790260036.769623104) |
+Testnet: [recorded receipt](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9), [HCS message](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10698279/messages/1), [registry and topic details](docs/release-evidence.md#live-evidence).
 
-AI-assisted implementation and review were used. Developers can reproduce the checks above and should inspect the code and dependency advisories before adapting this template.
+AI-assisted implementation and review; see [AGENTS.md](AGENTS.md) for development guidance.
 
 [Security and dependency audit](docs/security.md) · [MIT license and upstream notice](LICENSE).

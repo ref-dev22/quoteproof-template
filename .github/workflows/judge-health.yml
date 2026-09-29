@@ -20,6 +20,7 @@ permissions:
 
 jobs:
   judge-health:
+    if: github.repository == 'ref-dev22/quoteproof-template'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -32,6 +33,7 @@ jobs:
         run: bash scripts/ci-judge-health.sh
 
   judge-browser:
+    if: github.repository == 'ref-dev22/quoteproof-template'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

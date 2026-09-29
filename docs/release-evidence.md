@@ -2,6 +2,8 @@
 
 Each check below applies to its stated revision or run. For a newer release, run the commands in the [README](../README.md) and inspect [main CI](https://github.com/ref-dev22/quoteproof-template/actions?query=branch%3Amain).
 
+Current workflows: [app CI](https://github.com/ref-dev22/quoteproof-template/actions/workflows/lint.yaml) and [external scaffold gate](https://github.com/ref-dev22/quoteproof-template/actions/workflows/external-scaffold-release.yml).
+
 | Revision or surface | Recorded check and scope |
 | --- | --- |
 | Public merge `e9b3649130f416ee93f50e26ac4298589d5ccc57` | [PR #1](https://github.com/ref-dev22/quoteproof-template/pull/1) merged the reviewed implementation. Pin this SHA only when reproducing that merge revision. |
@@ -19,3 +21,12 @@ Each check below applies to its stated revision or run. For a newer release, run
 The [historical transaction](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) belongs to the published Testnet registry. [Mirror Node](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) reported `SUCCESS`. It is evidence of a recorded reference quote, not a new transaction created by a documentation release or proof of payment.
 
 The four read-only verifier cases are documented with inspectable public fixtures in [adversarial evidence](adversarial-evidence.md). A genuine receipt gave local `valid`, historical oracle `match`, and stored commitment `match`; the recomputed amount and false-price cases demonstrate distinct trust boundaries. Re-run them against the public RPC rather than treating a recorded report as a live result.
+
+## Live evidence
+
+| Item | Hedera Testnet evidence |
+| --- | --- |
+| Registry contract | [QuoteProofRegistry `0.0.10645852`](https://hashscan.io/testnet/contract/0xa1a741aF6e0A45164e2Af6A1C35dC30275629709) |
+| Historical receipt transaction | [Confirmed contract call](https://hashscan.io/testnet/tx/0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9) |
+| HCS topic `0.0.10698279` | [Topic and submit key](https://hashscan.io/testnet/topic/0.0.10698279) |
+| HCS message 1 | [Confirmed message submission](https://hashscan.io/testnet/transaction/1790260036.769623104) |

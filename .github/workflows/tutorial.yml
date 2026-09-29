@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   tutorial:
+    if: github.repository == 'ref-dev22/quoteproof-template'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -25,7 +26,9 @@ jobs:
         with:
           node-version: 20.18.3
       - name: Check documentation links
-        run: node scripts/ci-check-doc-links.mjs
+        run: |
+          node scripts/ci-check-doc-links.mjs
+          node scripts/check-scaffold-text.mjs
       - name: Test documentation guardrails
         run: node --test scripts/doc-checks.test.mjs
       - name: Check documentation prose

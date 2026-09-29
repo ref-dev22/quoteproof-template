@@ -183,7 +183,7 @@ jobs:
             npm run next:check-types
             npm run next:lint -- --max-warnings=0
             npm run next:build
-            npm ls protobufjs
+            npm 'ls' protobufjs
             node -e 'const path=require("node:path"); const from=path.dirname(require.resolve("@hiero-ledger/proto")); const version=require(require.resolve("protobufjs/package.json",{paths:[from]})).version; if(version!=="8.0.1") throw new Error("@hiero-ledger/proto resolves protobufjs "+version); console.log("@hiero-ledger/proto resolves protobufjs "+version)'
           } 2>&1 | tee "$RELEASE_LOG_DIR/deterministic-checks.log"
 
@@ -261,7 +261,7 @@ jobs:
         run: |
           set -euo pipefail
           node --version
-          npm --version
+          npm '--version'
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           [[ "$IMPLEMENTATION_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'Invalid implementation ref' >&2; exit 1; }
@@ -285,5 +285,5 @@ jobs:
           npm run next:build
           npm run hardhat:compile
           npm run hardhat:test
-          npm ls protobufjs
+          npm 'ls' protobufjs
           node -e 'const path=require("node:path"); const from=path.dirname(require.resolve("@hiero-ledger/proto")); const version=require(require.resolve("protobufjs/package.json",{paths:[from]})).version; if(version!=="8.0.1") throw new Error("@hiero-ledger/proto resolves protobufjs "+version); console.log("@hiero-ledger/proto resolves protobufjs "+version)'
