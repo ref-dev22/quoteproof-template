@@ -1,6 +1,6 @@
 # QuoteProof — reference-quote receipts on Hedera
 
-QuoteProof is a template for developers building USD quotes in HBAR on Hedera Testnet. It records the price used so anyone can check a receipt later.
+QuoteProof is a template for developers building USD quotes in HBAR on Hedera Testnet. It records the price used so anyone can check a receipt later. Scaffold-HBAR's built-in [`oracles` template](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles) reads prices; QuoteProof proves later which exact price a quote used.
 
 [Open the live judge preview](https://quoteproof-judge-preview.vercel.app/) or [inspect the historical receipt](https://quoteproof-judge-preview.vercel.app/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). Scroll to **Try to forge this receipt** to see which checks catch an altered amount or price.
 
@@ -28,7 +28,7 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-Open `http://localhost:3001`; the first page load compiles the app.
+Open `http://localhost:3001`; the first page load compiles the app and can take a few minutes.
 No wallet, funds or environment variables are needed for this preview.
 See [environment settings](docs/REFERENCE.md#environment-variables) and [Testnet setup](docs/HOW-TO.md#record-a-new-receipt-on-testnet) for your own deployment.
 
