@@ -17,7 +17,7 @@ Import the entire repository and configure one Next.js project:
 
 The API imports receipt utilities from `packages/hardhat`, and dependencies are locked at the repository root. An upload containing only `packages/nextjs` is insufficient. The existing `outputFileTracingRoot` in `next.config.ts` also points to the repository root.
 
-Vercel currently supports Node 20, 22 and 24. Its default is 24, and broad `engines.node` ranges can select the latest supported major. Check the actual remote build log; the published external-scaffold gate ran on Node 20.18.3 and is separate from a Vercel build.
+Check the remote build log for its Node version. The main branch's external gate uses Node 20.18.3 for scaffold checks and Node 22 for default install and build; a separate Node 24 probe is linked in [release evidence](release-evidence.md). That gate does not test a remote build.
 
 Keep the public RPC defaults for the first read-only check. Never upload a local `.env`, encrypted Hardhat account, deployer key, or wallet seed. A WalletConnect project ID is optional configuration for wallet-provider use; wallet signing is not part of the read-only checks below.
 

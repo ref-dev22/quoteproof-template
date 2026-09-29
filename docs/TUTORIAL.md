@@ -1,4 +1,4 @@
-# Your first verifiable receipt in 15 minutes
+# Your first verifiable receipt
 
 This walkthrough uses a published Hedera Testnet receipt. You need Node.js `>=20.18.3`, npm, and Git with `user.name` and `user.email` set. You do not need a wallet or Testnet funds.
 
@@ -18,13 +18,13 @@ npm ci
 npm run next:dev -- --hostname 0.0.0.0 --port 3001
 ```
 
-`npm ci` installs the committed dependency tree after scaffolding. Open `http://localhost:3001`. You should see the reference card; the first price fetch may show **Loading reference…**. If port 3001 is in use, stop the other server or change the port in the command and links below. If the feed is stale or the RPC is down, **Reference unavailable or stale** can appear; the historical receipt checks below use an older, fixed observation.
+`npm ci` installs the committed dependency tree after scaffolding. Open `http://localhost:3001`. After Next prints `Ready`, the first page load still compiles the app, so wait for `Compiled /` (about 3½ minutes from start on a fresh Windows 10 machine). Later loads take seconds; the first local check can take about 30 seconds while API routes compile. You should see the reference card; the first price fetch may show **Loading reference…**. If port 3001 is in use, stop the other server or change the port in the command and links below. If the feed is stale or the RPC is down, **Reference unavailable or stale** can appear; the historical receipt checks below use an older, fixed observation.
 
 ## 2. Read and challenge the receipt
 
 Open the [historical share link on your app](http://localhost:3001/?tx=0x076690438e81f96fc77f3f6467157d2f53c05703ef098790a42b82909a340ef9&hcsTopic=0.0.10698279&hcsSeq=1). The page loads the published receipt and runs four checks: local arithmetic, stored registry fingerprint, historical Chainlink round, and HCS anchor. You should see four green matches. If an RPC or Mirror Node is unavailable, a network check can be gray; retry later without recording another transaction.
 
-Scroll to **Try to forge this receipt**. Tap **Add 1 tinybar**: arithmetic turns red, while the other three checks are skipped. Tap **Change $1.00 to $10.00 and recompute the fingerprint**: arithmetic and the real oracle price pass, but the registry and HCS checks turn red. Tap **Double the oracle price and recompute the fingerprint**: only arithmetic passes. **Restore original** returns to four green checks. These buttons send prepared forged copies through the same read-only checks; nothing is written to Hedera. If the buttons are absent, open the historical share link above; the simulation is offered only for that receipt.
+Scroll to **Try to forge this receipt**. The forge buttons unlock when the first comparison finishes; the button above shows **Comparing…** meanwhile. Tap **Add 1 tinybar**: arithmetic turns red, while the other three checks are skipped. Tap **Change $1.00 to $10.00 and recompute the fingerprint**: arithmetic and the real oracle price pass, but the registry and HCS checks turn red. Tap **Double the oracle price and recompute the fingerprint**: only arithmetic passes. **Restore original** returns to four green checks. These buttons send prepared forged copies through the same read-only checks; nothing is written to Hedera. If the buttons are absent, open the historical share link above; the simulation is offered only for that receipt.
 
 ## 3. Run the same cases in a terminal
 
